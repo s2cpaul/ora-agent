@@ -1,0 +1,5 @@
+    
+    // Special case for Frameworks or Agile queries
+    if (lowerQuery.includes("framework") || lowerQuery.includes("agile")) {
+      return "Agile is a way of working that helps teams deliver work faster, more flexibly, and with continuous improvement. It started in software development but is now used across government, business, and even military planning because it adapts quickly to change. I recommend this free course for Agile AI training: [AI Agility: Comprehensive Introduction](https://resources.scrumalliance.org/Course/ai-agility-comprehensive-introduction)";
+    }
