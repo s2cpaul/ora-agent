@@ -24,6 +24,14 @@
  * 
  * This architecture ensures users always get context-specific answers first,
  * with OpenAI serving as intelligent fallback for broader questions.
+ * 
+ * ============================================================================
+ * DESIGN RULES - AI AGENT SIDE PANEL
+ * ============================================================================
+ * 1. Agent side panel ALWAYS displays in LIGHT MODE (regardless of app theme)
+ * 2. Thought bubble text is BLACK (!text-black), never white
+ * 3. Feedback thumbs buttons are GRAY (text-gray-500) when not selected
+ * 4. Web links display with UNDERLINE and DARK BLUE color (text-blue-800)
  * ============================================================================
  */
 
@@ -52,6 +60,8 @@ import {
   Trash2,
   Upload,
   Settings,
+  RotateCcw,
+  FileText,
 } from "lucide-react";
 import { ReportIssueModal } from "./ReportIssueModal";
 import { FeedbackModal } from "./FeedbackModal";
@@ -64,6 +74,7 @@ import { AgentCollaborationIndicator, type CollaboratingAgent } from "./AgentCol
 interface AIAgentSidePanelProps {
   isOpen: boolean;
   onClose: () => void;
+  onShowConsentModal?: () => void;
 }
 
 interface Message {
@@ -76,27 +87,32 @@ interface Message {
   isMultiAgent?: boolean;
 }
 
-export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
+export function AIAgentSidePanel({ isOpen, onClose, onShowConsentModal }: AIAgentSidePanelProps) {
   const DEFAULT_VIDEO = "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/AgileMike.mp4";
   
   // Video rotation array
   const VIDEO_ROTATION = [
     "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/AgileMike.mp4",
+    "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/USMCWentlang.mp4",
     "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/CWO-John2026.mp4",
     "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/Process-Citrus.mp4",
     "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/AI_Literacy_GovBriefpart2.mp4",
     "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/MIT-Arnold.mp4",
     "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/KleeKaren2.mp4",
     "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/Failures1.mp4",
-    "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/USMCWentlang.mp4",
     "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/Validation1.mp4",
-    "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/Big3Risk-RACI-Governance.mp4"
+    "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/Big3Risk-RACI-Governance.mp4",
+    "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/NC4ME2.mp4"
   ];
 
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [questionCount, setQuestionCount] = useState(() => {
+    const saved = localStorage.getItem('userQuestionCount');
+    return saved ? parseInt(saved, 10) : 0;
+  });
   const [currentVideo, setCurrentVideo] = useState(DEFAULT_VIDEO);
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
@@ -107,6 +123,8 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
   const [showObservationPopup, setShowObservationPopup] = useState(false);
   const [observationText, setObservationText] = useState("");
   const [additionalObservation, setAdditionalObservation] = useState("");
+  const [isObservationSelected, setIsObservationSelected] = useState(false);
+  const [submittedObservation, setSubmittedObservation] = useState<string>("");
   const [configuredNewsSource, setConfiguredNewsSource] = useState<{name: string, url: string} | null>(null);
   const [configuredLibrary, setConfiguredLibrary] = useState<{name: string, url: string} | null>(null);
   const [configuredVideo, setConfiguredVideo] = useState<{name: string, url: string} | null>(null);
@@ -130,6 +148,7 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
   const [isCollaborating, setIsCollaborating] = useState(false);
   const [currentCollaboratingAgents, setCurrentCollaboratingAgents] = useState<CollaboratingAgent[]>([]);
   const [showMultiAgentMessage, setShowMultiAgentMessage] = useState(false);
+  const [showFreeQuestionsPopup, setShowFreeQuestionsPopup] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
@@ -137,7 +156,7 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Default observation template
-  const DEFAULT_OBSERVATION = "I observed that our team is struggling with [specific challenge]. This impacts [area of concern]. I believe we could improve by [suggestion].";
+  const DEFAULT_OBSERVATION = "Tell us how your team is using the agent and what needs improvement!";
 
   // Map topics to video URLs
   const topicVideoMap: Record<string, string> = {
@@ -206,6 +225,16 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
       return () => clearTimeout(timer);
     }
   }, [isOpen, messages.length]);
+
+  // Auto-hide free questions popup after 5 seconds
+  useEffect(() => {
+    if (showFreeQuestionsPopup && isOpen) {
+      const timer = setTimeout(() => {
+        setShowFreeQuestionsPopup(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showFreeQuestionsPopup, isOpen]);
 
   // Reset video when modal opens
   useEffect(() => {
@@ -396,33 +425,33 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
   const renderMessageContent = (content: string) => {
     const parts: JSX.Element[] = [];
     let lastIndex = 0;
-    
-    // First, handle markdown-style links [text](url)
-    const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-    let match;
     const processedRanges: Array<{start: number, end: number}> = [];
     
-    while ((match = markdownLinkRegex.exec(content)) !== null) {
-      const fullMatch = match[0];
-      const linkText = match[1];
-      const url = match[2];
-      const matchStart = match.index;
-      const matchEnd = match.index + fullMatch.length;
+    // First, handle HTML anchor tags <a href="url">text</a>
+    const htmlLinkRegex = /<a\s+href="([^"]+)"[^>]*>([^<]+)<\/a>/g;
+    let htmlMatch;
+    
+    while ((htmlMatch = htmlLinkRegex.exec(content)) !== null) {
+      const fullMatch = htmlMatch[0];
+      const url = htmlMatch[1];
+      const linkText = htmlMatch[2];
+      const matchStart = htmlMatch.index;
+      const matchEnd = htmlMatch.index + fullMatch.length;
       
       // Add text before the link
       if (matchStart > lastIndex) {
         const textBefore = content.substring(lastIndex, matchStart);
-        parts.push(<span key={`text-${lastIndex}`}>{textBefore}</span>);
+        parts.push(<span key={`text-${lastIndex}`} className="!text-black">{textBefore}</span>);
       }
       
-      // Add the markdown link
+      // Add the HTML link
       parts.push(
         <a
           key={`link-${matchStart}`}
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="underline decoration-1 underline-offset-2 text-blue-800 dark:text-blue-400 hover:opacity-70 cursor-pointer break-words"
+          className="underline decoration-1 underline-offset-2 text-blue-800 hover:opacity-70 cursor-pointer break-words"
         >
           {linkText}
         </a>
@@ -432,12 +461,52 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
       lastIndex = matchEnd;
     }
     
-    // Add remaining text after last markdown link
+    // Then, handle markdown-style links [text](url) in remaining text
+    const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    let match;
+    
+    while ((match = markdownLinkRegex.exec(content)) !== null) {
+      const fullMatch = match[0];
+      const linkText = match[1];
+      const url = match[2];
+      const matchStart = match.index;
+      const matchEnd = match.index + fullMatch.length;
+      
+      // Skip if already processed by HTML regex
+      const isProcessed = processedRanges.some(range => 
+        matchStart >= range.start && matchEnd <= range.end
+      );
+      if (isProcessed) continue;
+      
+      // Add text before the link
+      if (matchStart > lastIndex) {
+        const textBefore = content.substring(lastIndex, matchStart);
+        parts.push(<span key={`text-${lastIndex}`} className="!text-black">{textBefore}</span>);
+      }
+      
+      // Add the markdown link
+      parts.push(
+        <a
+          key={`link-${matchStart}`}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-1 underline-offset-2 text-blue-800 hover:opacity-70 cursor-pointer break-words"
+        >
+          {linkText}
+        </a>
+      );
+      
+      processedRanges.push({ start: matchStart, end: matchEnd });
+      lastIndex = matchEnd;
+    }
+    
+    // Add remaining text after all links
     if (lastIndex < content.length) {
       const remainingText = content.substring(lastIndex);
       
-      // Now handle plain URLs in the remaining text, avoiding processed ranges
-      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      // Now handle plain URLs in the remaining text
+      const urlRegex = /(https?:\/\/[^\s<]+)/g;
       const urlParts = remainingText.split(urlRegex);
       
       urlParts.forEach((part, index) => {
@@ -448,13 +517,13 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
               href={part}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline decoration-1 underline-offset-2 text-blue-800 dark:text-blue-400 hover:opacity-70 cursor-pointer break-words"
+              className="underline decoration-1 underline-offset-2 text-blue-800 hover:opacity-70 cursor-pointer break-words"
             >
               {part.replace('https://', '')}
             </a>
           );
         } else if (part) {
-          parts.push(<span key={`text-${lastIndex}-${index}`}>{part}</span>);
+          parts.push(<span key={`text-${lastIndex}-${index}`} className="!text-black">{part}</span>);
         }
       });
     }
@@ -537,9 +606,130 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
         }, 1000); // Show after 1 second delay
       }
     }
+    
+    // When NC4ME2 video starts playing, show the NC4ME employment info
+    if (currentVideo === "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/NC4ME2.mp4") {
+      // Check if this message hasn't been added yet in this session
+      const messageExists = messages.some(msg => 
+        msg.content.includes("North Carolina for military employment")
+      );
+      
+      if (!messageExists) {
+        setTimeout(() => {
+          const nc4meMessageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const nc4meMessage: Message = {
+            role: "assistant",
+            content: "North Carolina for military employment\nConnect directly to NC employers through our Career Connection 365 Employment Exchange. [NC4ME](https://www.nc4me.org)",
+            timestamp: new Date(),
+ 
+          };
+          setMessages(prev => [...prev, nc4meMessage]);
+          
+          // Show Forbes article 5 seconds after NC4ME message
+          setTimeout(() => {
+            const forbesMessageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const forbesMessage: Message = {
+              role: "assistant",
+              content: "Additional Resource: [The 5 Growth Skills That Matter Most When Working With AI in 2026](https://www.forbes.com/sites/dianehamilton/2026/01/03/the-5-growth-skills-that-matter-most-when-working-with-ai-in-2026) - Forbes article on essential AI skills.",
+              timestamp: new Date(),
+              id: forbesMessageId,
+            };
+            setMessages(prev => [...prev, forbesMessage]);
+          }, 5000);
+        }, 1000); // Show after 1 second delay
+      }
+    }
+    
+    // When Agile Mike video starts playing, show Innovation Frameworks info with sequential messages
+    if (currentVideo === "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/AgileMike.mp4") {
+      // Check if this message hasn't been added yet in this session
+      const messageExists = messages.some(msg => 
+        msg.content.includes("Innovation frameworks provide structured approaches")
+      );
+      
+      if (!messageExists) {
+        // First message - Innovation frameworks
+        setTimeout(() => {
+          const messageId1 = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const frameworkMessage: Message = {
+            role: "assistant",
+            content: "Innovation frameworks provide structured approaches to AI adoption. The most effective combine agile methodologies with design thinking and continuous learning. Would you like to explore specific frameworks? This can help any leader ask better AI questions: <a href=\"https://www.harvardbusiness.org/wp-content/uploads/2025/10/CRE6997_ENT_CLevel_Assessment_Oct2025.pdf\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-blue-800 underline hover:text-blue-900\">Harvard 2025 C-Level Assessment</a>. I suggest this resource: <a href=\"https://www.nist.gov/itl/ai-risk-management-framework\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-blue-800 underline hover:text-blue-900\">NIST AI Risk Management Framework</a>",
+            timestamp: new Date(),
+            id: messageId1,
+          };
+          setMessages(prev => [...prev, frameworkMessage]);
+        }, 1000);
+        
+        // Second message - Free course recommendation (6 seconds after first)
+        setTimeout(() => {
+          const messageId2 = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const courseMessage: Message = {
+            role: "assistant",
+            content: "I also recommend this free course for Agile AI training: <a href=\"https://resources.scrumalliance.org/Course/ai-agility-comprehensive-introduction?_gl=1*a0c0tj*_gcl_au*Mzc4Mjc5ODEyLjE3NjcxMDE1NDA.\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-blue-800 underline hover:text-blue-900\">AI Agility: Comprehensive Introduction</a>. Additional Resource: <a href=\"https://www.forbes.com/sites/dianehamilton/2026/01/03/the-5-growth-skills-that-matter-most-when-working-with-ai-in-2026/\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-blue-800 underline hover:text-blue-900\">The 5 Growth Skills That Matter Most When Working With AI in 2026 - Forbes article on essential AI skills</a>.",
+            timestamp: new Date(),
+            id: messageId2,
+          };
+          setMessages(prev => [...prev, courseMessage]);
+        }, 7000); // 1000ms + 6000ms delay
+        
+        // Third message - Lean vs Agile (5 seconds after second message)
+        setTimeout(() => {
+          const messageId3 = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const leanAgileMessage: Message = {
+            role: "assistant",
+            content: "<a href=\"https://www.ai-agile.org/2025/02/lean-vs-agile-understanding-differences.html?utm_source=copilot.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-blue-800 underline hover:text-blue-900\">https://www.ai-agile.org/2025/02/lean-vs-agile-understanding-differences.html</a>",
+            timestamp: new Date(),
+            id: messageId3,
+          };
+          setMessages(prev => [...prev, leanAgileMessage]);
+        }, 12000); // 7000ms + 5000ms delay
+        
+        // Fourth message - Agile Manifesto (immediately after third)
+        setTimeout(() => {
+          const messageId4 = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const manifestoMessage: Message = {
+            role: "assistant",
+            content: "<a href=\"https://agilemanifesto.org/?utm_source=copilot.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-blue-800 underline hover:text-blue-900\">https://agilemanifesto.org</a>",
+            timestamp: new Date(),
+            id: messageId4,
+          };
+          setMessages(prev => [...prev, manifestoMessage]);
+        }, 12500); // Just after the third message
+      }
+    }
+    
+    // When USMC Wentlang video starts playing, show Evidence-Based Policymaking reference
+    if (currentVideo === "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/USMCWentlang.mp4") {
+      // Check if this message hasn't been added yet in this session
+      const messageExists = messages.some(msg => 
+        msg.content.includes("Phase 2 Implementation of the Foundations for Evidence-Based Policymaking")
+      );
+      
+      if (!messageExists) {
+        setTimeout(() => {
+          const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const policyMessage: Message = {
+            role: "assistant",
+            content: "Real World Reference Materials: <a href=\"https://www.whitehouse.gov/wp-content/uploads/2025/01/M-25-05-Phase-2-Implementation-of-the-Foundations-for-Evidence-Based-Policymaking-Act-of-2018-Open-Government-Data-Access-and-Management-Guidance.pdf\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-blue-800 underline hover:text-blue-900\">M-25-05: Phase 2 Implementation of the Foundations for Evidence-Based Policymaking Act of 2018</a>",
+            timestamp: new Date(),
+            id: messageId,
+          };
+          setMessages(prev => [...prev, policyMessage]);
+        }, 1000); // Show after 1 second delay
+      }
+    }
   }, [currentVideo]);
 
   const handleVideoEnd = () => {
+    // Special handling: If SSgtW.mp4 just ended, play NC4ME2.mp4 next
+    if (currentVideo === "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/SSgtW.mp4") {
+      const nc4meVideo = "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/NC4ME2.mp4";
+      setCurrentVideo(nc4meVideo);
+      localStorage.setItem('lastPlayedVideo', nc4meVideo);
+      // Messages will be shown by the useEffect that monitors currentVideo changes
+      return;
+    }
+    
     // Get the next video from rotation (including custom videos)
     const lastPlayedVideo = localStorage.getItem('lastPlayedVideo');
     const currentIndex = combinedVideoRotation.findIndex(v => v === currentVideo);
@@ -646,15 +836,16 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
       "Governance & Workforce Readiness": "Effective AI governance balances innovation with risk management. Workforce readiness requires upskilling, change management, and clear role definitions using frameworks like RACI. Get a template and get started! [https://www.smartsheet.com/content/raci-templates-excel](https://www.smartsheet.com/content/raci-templates-excel)",
       "ROI": "Return on Investment (ROI) is a simple way to measure how much value you get back compared to what you put in. It's used in business, finance, marketing, training programs, and even personal decisions.",
       "KPI & ROI": "An AI Governance KPI Dashboard builds trust, strengthens transparency and maximizes return on investment by giving leaders a clear view of model reliability, data-drift incidents, fairness audit coverage, and overall operational performance. Key metrics include: Operational Maintenance & Consumption Cost, Model Reliability, Data Drift Incidents, Fairness Audit Coverage, Transparency Measurement, IT Spending on Applied AI, and AI Workforce Training & Readiness. I suggest this resource: [STATE OF AI IN BUSINESS 2025](https://mlq.ai/media/quarterly_decks/v0.1_State_of_AI_in_Business_2025_Report.pdf?utm_source=copilot.com)",
-      "Training": "Effective AI training programs combine technical skills with practical application. Research shows that hands-on learning with real-world scenarios increases retention by 60%.\n\nCheck out: [The 5 Skill Sets Leaders Must Develop in the AI Era](https://www.forbes.com/councils/forbescoachescouncil/2026/01/07/the-5-skill-sets-leaders-must-develop-in-the-ai-era/?utm_source=copilot.com) - Forbes article on essential AI skills.\n\nFor free AI leadership training, and a personalized agent like this one, check out: https://agent.myora.now",
+      "Training": "Effective AI training programs combine technical skills with practical application. Research shows that hands-on learning with real-world scenarios increases retention by 60%.\n\nCheck out: [The 5 Skill Sets Leaders Must Develop in the AI Era](https://www.forbes.com/councils/forbescoachescouncil/2026/01/07/the-5-skill-sets-leaders-must-develop-in-the-ai-era/?utm_source=copilot.com) - Forbes article on essential AI skills.\n\nFor free AI leadership training, and a personalized agent like this one, check out: [https://agent.myora.now](https://agent.myora.now)",
       "Next Live Q & A": "Let's make an appointment! Click [Calendly.com/caraz007](https://calendly.com/caraz007)\n\nMy personal AI avatar makes the introduction and helps me stay organized! We can talk about free AI leadership training, Agentic AI, measurable change and learn how you can get a personalized agent just like this one!",
-      "RACI": "RACI Matrix is a powerful governance framework that clarifies roles and responsibilities. It stands for: Responsible, Accountable, Consulted, and Informed.\n\nFor AI projects, RACI helps prevent confusion about who owns decisions, who needs to be informed, and who should be consulted.\n\nGet free RACI template: https://www.smartsheet.com/content/raci-templates-excel",
+      "RACI": "RACI Matrix is a powerful governance framework that clarifies roles and responsibilities. It stands for: Responsible, Accountable, Consulted, and Informed. For AI projects, RACI helps prevent confusion about who owns decisions, who needs to be informed, and who should be consulted. Get free RACI template: www.smartsheet.com/content/raci-templates-excel",
       "Governance": "AI governance frameworks establish clear accountability, ethical guidelines, and risk management protocols.\n\nKey components include: decision rights, oversight mechanisms, compliance standards, and continuous monitoring.\n\nExplore best practices: mitsloan.mit.edu/ai-governance-what-is-it-and-why",
       "Bias": "AI bias occurs when algorithms produce systematically prejudiced results due to flawed training data or design assumptions.\n\nMitigation strategies include: diverse training data, regular audits, human oversight, and transparency in decision-making.\n\nDeep dive into AI bias: ibm.com/topics/ai-bias",
       "Risk": "AI risk management involves identifying, assessing, and mitigating potential harms from AI systems.\n\nCritical risk areas: data privacy, security vulnerabilities, model drift, ethical concerns, and regulatory compliance.\n\nFramework guide: nist.gov/ai-risk-management-framework",
       "Report": "This report summarizes observation(s) recorded on January 6, 2026. The observations are categorized into areas for improvement or practices to sustain. Specific objectives during this observation include:\n• [objective]\n• [objective]\n• [objective]",
       "Leadership": "House Resolution 719 reminds us of our service to civil discussion and healthy debate. [US Congress](https://www.congress.gov/bill/119th-congress/house-resolution/719/text?utm_source=copilot.com)",
       "Open Government Act": "The Open Government requires Machine-Readable Data — Open Government data assets made available by all agencies. [https://www.congress.gov/bill/115th-congress/house-bill/1770/text](https://www.congress.gov/bill/115th-congress/house-bill/1770/text)",
+      "AI Trends": "Here are the latest AI insights from our configured sources:\n\n📊 **Forbes AI 50** - Leading companies transforming industries with artificial intelligence\n[Forbes AI 50 List](https://www.forbes.com/lists/ai50/?utm_source=copilot.com)\n\n🔬 **MIT Technology Review – AI Section** - Deep, technical, and ethical AI reporting from MIT's respected publication\n[MIT Tech Review AI](https://www.technologyreview.com/topic/artificial-intelligence/)\n\nThese sources provide cutting-edge insights on AI innovation, emerging technologies, and industry transformation. What specific AI trend interests you?",
     };
     return responses[topic] || "Thank you for asking. I am thinking... hmm...";
   };
@@ -686,6 +877,108 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
     }
 
     return null;
+  };
+
+  // ============================================================================
+  // AI TRENDS RAG - JINA AI READER INTEGRATION
+  // ============================================================================
+  
+  /**
+   * Detects if a question is AI-related and should trigger AI Trends retrieval
+   */
+  const isAIRelatedQuestion = (query: string): boolean => {
+    const queryLower = query.toLowerCase();
+    
+    // AI-related keywords that should trigger retrieval from AI Trends sources
+    const aiKeywords = [
+      "artificial intelligence",
+      "ai trend",
+      "ai company",
+      "ai companies",
+      "machine learning",
+      "neural network",
+      "deep learning",
+      "llm",
+      "large language model",
+      "generative ai",
+      "gen ai",
+      "chatgpt",
+      "claude",
+      "openai",
+      "anthropic",
+      "ai startup",
+      "ai innovation",
+      "ai technology",
+      "ai research",
+      "latest ai",
+      "new ai",
+      "ai development",
+      "ai breakthrough",
+      "ai advancement",
+      "ai news",
+      "ai update",
+    ];
+    
+    return aiKeywords.some(keyword => queryLower.includes(keyword));
+  };
+
+  /**
+   * Fetches content from a URL using Jina AI Reader
+   * Returns clean, LLM-friendly text
+   */
+  const fetchWithJinaReader = async (url: string): Promise<string> => {
+    try {
+      const jinaUrl = `https://r.jina.ai/${url}`;
+      const response = await fetch(jinaUrl, {
+        headers: {
+          'Accept': 'text/plain',
+          'X-Return-Format': 'text'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Jina Reader failed: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      // Return first 3000 characters to avoid overwhelming the context
+      return text.slice(0, 3000);
+    } catch (error) {
+      console.error('Error fetching with Jina Reader:', error);
+      return '';
+    }
+  };
+
+  /**
+   * Retrieves relevant content from AI Trends sources
+   */
+  const retrieveAITrendsContent = async (): Promise<string> => {
+    const sources = [
+      {
+        name: "Forbes AI 50",
+        url: "https://www.forbes.com/lists/ai50/"
+      },
+      {
+        name: "MIT Technology Review - AI",
+        url: "https://www.technologyreview.com/topic/artificial-intelligence/"
+      }
+    ];
+    
+    try {
+      // Fetch from both sources in parallel
+      const contents = await Promise.all(
+        sources.map(async (source) => {
+          const content = await fetchWithJinaReader(source.url);
+          return content ? `\n\n**From ${source.name}:**\n${content}` : '';
+        })
+      );
+      
+      const combinedContent = contents.filter(c => c).join('\n\n---\n');
+      return combinedContent;
+    } catch (error) {
+      console.error('Error retrieving AI Trends content:', error);
+      return '';
+    }
   };
 
   // Detect news source configuration commands
@@ -1339,6 +1632,30 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
     if (!inputValue.trim()) return;
 
     // ========================================================================
+    // QUESTION LIMIT CHECK FOR FREE USERS
+    // ========================================================================
+    // Check if user has accepted agreement
+    const userAgreementAccepted = localStorage.getItem("userAgreementAccepted");
+    
+    if (!userAgreementAccepted) {
+      // Increment question count
+      const newCount = questionCount + 1;
+      setQuestionCount(newCount);
+      localStorage.setItem('userQuestionCount', newCount.toString());
+      
+      // Check if limit reached (10 questions)
+      if (newCount >= 10) {
+        // Show consent modal after this question is answered
+        if (onShowConsentModal) {
+          // Delay showing modal until after response
+          setTimeout(() => {
+            onShowConsentModal();
+          }, 2000);
+        }
+      }
+    }
+
+    // ========================================================================
     // RESPONSE PRIORITY ARCHITECTURE
     // ========================================================================
     // 1. APP CONTEXT CONTENT (First Priority - Local Knowledge Base)
@@ -1825,7 +2142,7 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
       
       if (queryLower.includes("hiring") || queryLower.includes("hr")) {
         agents.push({
-          name: "HR Strategist",
+          name: "Workforce Development",
           avatar: "👥",
           status: "thinking",
           specialty: "Human Resources & Talent"
@@ -1874,6 +2191,40 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
           logConversation(query, response, "Multi-Agent");
         }, 2000);
       }, 3000);
+      return;
+    }
+    
+    // ========================================================================
+    // AI TRENDS RAG - Check for AI-related questions
+    // ========================================================================
+    if (isAIRelatedQuestion(query)) {
+      logQuestion("AI Trends (RAG)", query, false);
+      setIsTyping(true);
+      
+      // Fetch content from AI Trends sources asynchronously
+      retrieveAITrendsContent().then((retrievedContent) => {
+        const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        let response = '';
+        if (retrievedContent) {
+          // Successfully retrieved content from sources
+          response = `🔍 **AI Trends Insight** (Retrieved from configured sources):\n\n${retrievedContent}\n\n---\n\n📊 **Sources:**\n• [Forbes AI 50](https://www.forbes.com/lists/ai50/)\n• [MIT Technology Review - AI](https://www.technologyreview.com/topic/artificial-intelligence/)\n\nWould you like me to explore a specific aspect of these AI trends?`;
+        } else {
+          // Fallback if retrieval fails
+          response = `🤔 I detected this is an AI-related question. Here are my configured AI Trends sources:\n\n📊 **Forbes AI 50** - Leading companies transforming industries with artificial intelligence\n[Forbes AI 50 List](https://www.forbes.com/lists/ai50/)\n\n🔬 **MIT Technology Review – AI Section** - Deep, technical, and ethical AI reporting\n[MIT Tech Review AI](https://www.technologyreview.com/topic/artificial-intelligence/)\n\nWhat specific AI topic would you like to explore?`;
+        }
+        
+        const assistantMessage: Message = {
+          role: "assistant",
+          content: response,
+          id: messageId,
+          timestamp: Date.now(),
+          feedback: null
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+        setIsTyping(false);
+        logConversation(query, response, "AI Trends RAG");
+      });
       return;
     }
     
@@ -1949,6 +2300,7 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
     // Open observation popup with default template
     setObservationText(DEFAULT_OBSERVATION);
     setAdditionalObservation("");
+    setIsObservationSelected(false);
     setShowObservationPopup(true);
   };
 
@@ -1961,6 +2313,7 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
     setInputValue(finalObservation);
     setShowObservationPopup(false);
     setAdditionalObservation("");
+    setIsObservationSelected(false);
     // Focus input after closing popup
     setTimeout(() => {
       inputRef.current?.focus();
@@ -1971,10 +2324,54 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
     setShowObservationPopup(false);
     setObservationText("");
     setAdditionalObservation("");
+    setIsObservationSelected(false);
   };
 
   const handleResetToDefault = () => {
     setObservationText(DEFAULT_OBSERVATION);
+  };
+
+  const handleSendEmail = () => {
+    // Prepare email content
+    const subject = encodeURIComponent('Quick Observation from ORA');
+    const body = encodeURIComponent(
+      `Quick Observation:\n\n${observationText}\n\n${additionalObservation ? `Additional Context:\n${additionalObservation}\n\n` : ''}---\nSent from ORA AI Leadership Agent`
+    );
+    
+    // Open default email client with BCC to cara@oratf.info
+    // Note: BCC support in mailto varies by email client
+    // Gmail and Outlook support the bcc parameter
+    window.location.href = `mailto:?subject=${subject}&body=${body}&bcc=cara@oratf.info`;
+  };
+
+  const handleObservationSubmitToTracker = async () => {
+    // Combine default observation with additional text
+    let finalObservation = observationText;
+    if (additionalObservation.trim()) {
+      finalObservation = observationText + "\n\nAdditional context: " + additionalObservation;
+    }
+
+    // TODO: Track in Firebase
+    try {
+      // Firebase tracking would go here
+      // Example:
+      // await addDoc(collection(db, 'observations'), {
+      //   observation: finalObservation,
+      //   userEmail: subscriberEmail,
+      //   timestamp: serverTimestamp(),
+      // });
+      
+      console.log('Observation submitted:', finalObservation);
+    } catch (error) {
+      console.error('Error tracking observation:', error);
+    }
+
+    // Populate issue tracker (open ReportIssueModal with pre-filled data)
+    setSubmittedObservation(finalObservation);
+    setShowObservationPopup(false);
+    setIsReportIssueOpen(true);
+    setAdditionalObservation("");
+    setIsObservationSelected(false);
   };
 
   const handleConfigClick = () => {
@@ -2035,7 +2432,7 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black flex items-center justify-center z-50 sm:bg-black/80 sm:p-4">
       {/* Hidden file input for video uploads */}
       <input
         ref={fileInputRef}
@@ -2045,35 +2442,36 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
         className="hidden"
       />
       
-      {/* iPhone 16 Frame */}
-      <div className="relative w-full max-w-[393px] h-[852px] bg-black rounded-[3rem] shadow-2xl border-8 border-gray-800 overflow-hidden">
+      {/* iPhone 16 Frame - Full screen on mobile (393x852), centered modal on desktop */}
+      <div className="relative w-full h-full bg-black overflow-hidden sm:max-w-[393px] sm:h-[852px] sm:rounded-[3rem] sm:shadow-2xl sm:border-2 sm:border-gray-800">
         
-        {/* Screen Content */}
-        <div className="relative w-full h-full bg-background flex flex-col">
+        {/* RULE: Agent side panel always displays in light mode */}
+        {/* Screen Content - Force Light Mode - Override any dark mode inheritance */}
+        <div className="relative w-full h-full !bg-white flex flex-col">
           {/* Top Bar */}
-          <div className="h-14 bg-card border-b border-border flex items-center justify-between pl-[9px] pr-4 pt-8">
-            <div className="flex items-center gap-3 pt-[2px] -ml-[3px]">
+          <div className="h-[80px] -mt-[11px] !bg-white !border-b !border-gray-200 flex items-center justify-between pl-[9px] pr-4 pt-[5px]">
+            <div className="flex items-center gap-3 pt-[15px] -ml-[4px]">
               <button 
                 onClick={onClose}
-                className="p-2 rounded-lg hover:bg-accent transition-colors"
+                className="p-2 rounded-lg !bg-transparent hover:!bg-gray-100 active:!bg-gray-200 transition-colors touch-manipulation"
                 title="Close"
               >
-                <X className="size-5" />
+                <X className="size-5 !text-gray-600" />
               </button>
               <button 
                 onClick={handleConfigClick}
-                className="p-1 rounded-lg hover:bg-accent transition-colors -ml-[5px]"
+                className="p-2 rounded-lg !bg-transparent hover:!bg-gray-100 active:!bg-gray-200 transition-colors touch-manipulation"
                 title="Configuration Settings"
               >
-                <Lightbulb className="size-4 fill-yellow-400 text-black stroke-2" />
+                <Lightbulb className="!fill-yellow-400 !text-black !stroke-2" style={{ width: '18px', height: '18px' }} />
               </button>
               <button 
                 onClick={() => setShowAgentConnectionsManager(true)}
-                className="p-2 rounded-lg hover:bg-accent transition-colors relative group"
+                className="p-2 rounded-lg !bg-transparent hover:!bg-gray-100 active:!bg-gray-200 transition-colors relative group touch-manipulation"
                 title="Agent Connections"
               >
-                <Settings className="size-4 text-purple-600" />
-                <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                <Settings className="size-4 !text-gray-600" style={{ fill: '#C0C0C0' }} />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[-3px] px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
                   Multi-Agent
                 </span>
               </button>
@@ -2084,11 +2482,11 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
                       window.open(configuredLibrary.url, '_blank');
                     }
                   }}
-                  className="p-2 rounded-lg hover:bg-accent transition-colors"
+                  className="p-2 rounded-lg !bg-transparent hover:!bg-gray-100 active:!bg-gray-200 transition-colors touch-manipulation"
                 >
-                  <Files className="size-4" />
+                  <Files className="size-4 !text-gray-600" />
                 </button>
-                <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[-3px] px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
                   {configuredLibrary ? configuredLibrary.name : "Library"}
                 </span>
               </div>
@@ -2099,7 +2497,7 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
                       window.open(configuredCalendar.url, '_blank');
                     }
                   }}
-                  className="p-2 rounded-lg hover:bg-accent transition-colors"
+                  className="p-2 rounded-lg !bg-transparent hover:!bg-gray-100 active:!bg-gray-200 transition-colors touch-manipulation"
                 >
                   <svg 
                     className="size-4" 
@@ -2108,7 +2506,7 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
                     xmlns="http://www.w3.org/2000/svg"
                   >
                     {/* Calendar body */}
-                    <rect x="3" y="4" width="18" height="18" rx="2" stroke="black" strokeWidth="2" fill="none"/>
+                    <rect x="3" y="4" width="18" height="18" rx="2" stroke="black" strokeWidth="2" fill="#ADD8E6"/>
                     {/* Top header filled with bright light blue */}
                     <rect x="3" y="4" width="18" height="5" rx="2" fill="#6CB4FF" stroke="black" strokeWidth="2"/>
                     {/* Date hooks */}
@@ -2116,7 +2514,7 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
                     <line x1="17" y1="2" x2="17" y2="6" stroke="black" strokeWidth="2" strokeLinecap="round"/>
                   </svg>
                 </button>
-                <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[-3px] px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
                   {configuredCalendar ? configuredCalendar.name : "Calendar"}
                 </span>
               </div>
@@ -2127,11 +2525,11 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
                       window.open(configuredVideo.url, '_blank');
                     }
                   }}
-                  className="p-2 rounded-lg hover:bg-accent transition-colors"
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  <Video className="size-4" />
+                  <Video className="size-4 text-gray-600" />
                 </button>
-                <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[-3px] px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
                   {configuredVideo ? configuredVideo.name : "Video"}
                 </span>
               </div>
@@ -2142,76 +2540,76 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
                 >
                   <AlertTriangle className="size-4 text-yellow-400" style={{ stroke: 'black', strokeWidth: 2, fill: 'rgb(250, 204, 21)' }} />
                 </button>
-                <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[-3px] px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
                   Report AI Issue
                 </span>
               </div>
               <div className="relative group">
                 <button 
                   onClick={() => setIsFeedbackOpen(true)}
-                  className="p-2 rounded-lg hover:bg-accent transition-colors"
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <Heart className="size-4 text-red-500" style={{ fill: 'rgb(239, 68, 68)' }} />
                 </button>
-                <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[-3px] px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
                   Feedback
                 </span>
               </div>
               <div className="relative group -ml-0.5">
                 <button 
                   onClick={() => window.open('https://agent.myora.now/', '_blank')}
-                  className="p-2 rounded-lg hover:bg-accent transition-colors"
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  <Brain className="size-4" />
+                  <Brain className="size-4 text-gray-600" />
                 </button>
-                <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                  Training
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[-3px] px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                  Applied AI Governance & Organizational Blind Spots
                 </span>
               </div>
             </div>
           </div>
 
           {/* Category Pills */}
-          <div className="relative z-50 pl-[7px] pr-4 py-3 mt-[5px] bg-card border-b border-border">
+          <div className="relative z-50 pl-[7px] pr-4 pt-[2px] pb-3 -mt-[3px] bg-white">
             <div className="flex gap-[7px] overflow-x-auto scrollbar-hide">
               <a 
                 href="https://agent.myora.now/" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary text-primary-foreground text-xs font-bold tracking-wider rounded-full hover:bg-primary/90 transition-colors cursor-pointer whitespace-nowrap"
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-primary text-primary-foreground text-xs font-bold tracking-wider rounded-full hover:bg-primary/90 transition-colors cursor-pointer whitespace-nowrap"
               >
                 ORA
               </a>
               <button
                 onClick={() => handleCategoryClick("Leadership")}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${
                   selectedCategory === "Leadership" 
                     ? "bg-primary text-primary-foreground" 
-                    : "bg-gray-200 dark:bg-gray-300 text-black hover:bg-gray-300 dark:hover:bg-gray-400"
+                    : "bg-gray-200 text-black hover:bg-gray-300"
                 }`}
               >
-                <Star className="size-3" />
+                <Star className="size-3 fill-yellow-400 text-black" />
                 Leadership
               </button>
 
               <button
                 onClick={() => handleCategoryClick("Training")}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${
                   selectedCategory === "Training" 
                     ? "bg-primary text-primary-foreground" 
-                    : "bg-gray-200 dark:bg-gray-300 text-black hover:bg-gray-300 dark:hover:bg-gray-400"
+                    : "bg-gray-200 text-black hover:bg-gray-300"
                 }`}
               >
-                <Brain className="size-3" />
+                <Brain className="size-3 text-gray-600" />
                 Training
               </button>
 
               <button
                 onClick={() => handleCategoryClick("Human Health")}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${
                   selectedCategory === "Human Health" 
                     ? "bg-primary text-primary-foreground" 
-                    : "bg-gray-200 dark:bg-gray-300 text-black hover:bg-gray-300 dark:hover:bg-gray-400"
+                    : "bg-gray-200 text-black hover:bg-gray-300"
                 }`}
               >
                 <Activity className="size-3" />
@@ -2219,11 +2617,23 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
               </button>
 
               <button
+                onClick={() => handleCategoryClick("AI Trends")}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${
+                  selectedCategory === "AI Trends" 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-gray-200 text-black hover:bg-gray-300"
+                }`}
+              >
+                <Lightbulb className="size-3" />
+                AI Trends
+              </button>
+
+              <button
                 onClick={() => handleCategoryClick("News")}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${
                   selectedCategory === "News" 
                     ? "bg-primary text-primary-foreground" 
-                    : "bg-gray-200 dark:bg-gray-300 text-black hover:bg-gray-300 dark:hover:bg-gray-400"
+                    : "bg-gray-200 text-black hover:bg-gray-300"
                 }`}
               >
                 <Megaphone className="size-3" />
@@ -2233,12 +2643,17 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
           </div>
 
           {/* Mode Toggle - Chat/Video */}
-          <div className="px-4 py-2 bg-card border-b border-border flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">
+          <div className="relative px-4 -my-[3px] mt-[-6px] bg-white border-b border-gray-200 flex items-center justify-between">
+            <span className="text-xs text-gray-600 font-medium">
               {isVideoVisible ? "Video Mode" : "Chat Mode"}
             </span>
             <button
-              onClick={() => setMessages([])}
+              onClick={() => {
+                setMessages([]);
+                setShowMultiAgentMessage(true);
+                setIsCollaborating(false);
+                setCurrentCollaboratingAgents([]);
+              }}
               className="p-1.5 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors flex items-center gap-1"
               title="Clear chat"
             >
@@ -2247,7 +2662,7 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
             </button>
             <button
               onClick={() => setIsVideoVisible(!isVideoVisible)}
-              className="text-xs text-primary hover:underline font-medium"
+              className="text-xs hover:underline font-medium text-gray-600"
             >
               {isVideoVisible ? "Show Chat" : "Show Video"}
             </button>
@@ -2255,13 +2670,13 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
 
           {/* Video Area */}
           {isVideoVisible ? (
-            <div className="relative h-[394px] bg-black flex items-center justify-center overflow-hidden mt-0.5 pt-[2px]">
+            <div className="relative h-[394px] bg-black flex items-center justify-center overflow-hidden -mt-[1px] pt-[6px]">
               <button
                 onClick={() => setIsVideoVisible(false)}
                 className="absolute top-3 right-3 z-10 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors"
                 title="Close video"
               >
-                <X className="size-4" />
+                <X className="size-4 text-gray-600" />
               </button>
               <video
                 ref={videoRef}
@@ -2277,22 +2692,22 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
           ) : null}
 
           {/* Chat History */}
-          <div className={`${isVideoVisible ? 'h-[360px]' : 'h-[calc(100vh-320px)]'} bg-card border-t border-border overflow-y-auto px-4 py-3 pb-[52px]`}>
+          <div className={`${isVideoVisible ? 'h-[360px]' : 'h-[calc(100vh-320px)]'} bg-white border-t border-gray-200 overflow-y-auto px-4 py-3 pb-[52px]`}>
             <div className="space-y-3">
               {/* Client-Side Configuration Message */}
               {messages.length === 0 && (
-                <div className="bg-gray-50 dark:bg-gray-800/50 border-2 border-blue-500 dark:border-blue-500 rounded-xl p-3">
+                <div className="bg-gray-50 border-2 border-blue-500 rounded-xl p-3">
                   <div className="flex items-start gap-2">
                     <Lightbulb className="size-5 text-black fill-yellow-400 mt-0.5 flex-shrink-0 stroke-2" />
                     <div>
-                      <h4 className="font-bold text-xs text-gray-900 dark:text-white mb-1">
+                      <h4 className="font-bold text-xs text-gray-900 mb-1">
                         Client-Side Custom Configuration
                       </h4>
-                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                      <p className="text-xs text-gray-700 leading-relaxed">
                         Fast, easy setup with no server required! From your mobile device, configure your preferences, integrations, and tools directly in your browser for instant personalization.
                       </p>
-                      <p className="text-xs text-gray-700 dark:text-gray-300 mt-1.5">
-                        Check out the <Lightbulb className="inline size-3 text-black fill-yellow-400 stroke-2" /> icon to configure and the <Settings className="inline size-3 text-gray-600 dark:text-gray-400 stroke-2" /> gear to manage multi-agent custom connections with Subject Matter Experts!
+                      <p className="text-xs text-gray-700 mt-1.5">
+                        Check out the <Lightbulb className="inline size-3 text-black fill-yellow-400 stroke-2" /> icon to configure and the <Settings className="inline size-3 text-gray-600 stroke-2" /> gear to manage multi-agent custom connections with Subject Matter Experts!
                       </p>
                     </div>
                   </div>
@@ -2303,21 +2718,18 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
               {messages.length === 0 && showMultiAgentMessage && (
                 <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-2 border-purple-300 dark:border-purple-700 rounded-xl p-3">
                   <div className="flex items-start gap-2">
-                    <Brain className="size-5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+                    <Brain className="size-5 text-gray-600 mt-0.5 flex-shrink-0" />
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-bold text-xs text-gray-900 dark:text-white">
+                        <h4 className="font-bold text-xs text-gray-900 dark:text-black">
                           Multi-Agent Collaboration Available
                         </h4>
                         <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                           NEW!
                         </span>
                       </div>
-                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
-                        Try asking about compliance, legal, budget, or hiring to see specialist agents collaborate on your question!
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5">
-                        Click the <Settings className="inline size-3 text-purple-600 dark:text-purple-400" /> icon above to manage connections. Visit Multi-Agent Features in the header to learn more.
+                      <p className="text-xs text-gray-700 dark:text-black leading-relaxed">
+                        Try asking about compliance, legal, budget, or hiring to see specialist agents collaborate on your question! Click the <Settings className="inline size-3 text-purple-600 dark:text-purple-400" /> icon above to manage connections. Visit Multi-Agent Features in the header to learn more.
                       </p>
                     </div>
                   </div>
@@ -2331,21 +2743,18 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
                   <div
                     className={`max-w-[85%] rounded-2xl px-3 py-1.5 ${
                       message.role === "user"
-                        ? "bg-gray-200 dark:bg-gray-700"
-                        : "bg-gray-200 dark:bg-gray-700"
+                        ? "bg-gray-200"
+                        : "bg-gray-200"
                     }`}
                   >
-                    <p className={`text-xs leading-relaxed whitespace-pre-wrap [&_a]:underline [&_a]:text-blue-700 [&_a]:dark:text-blue-400 ${
-                      message.role === "user" 
-                        ? "text-black dark:text-white"
-                        : "text-black dark:text-white"
-                    }`}>{renderMessageContent(message.content)}</p>
+                    <p className="text-xs leading-relaxed whitespace-pre-wrap !text-black [&_a]:underline [&_a]:!text-blue-800">{renderMessageContent(message.content)}</p>
+                    {/* RULE: Thumbs buttons are gray, not white */}
                     {message.role === "assistant" && message.id && (
                       <div className="flex gap-2 mt-2">
                         <button
                           onClick={() => handleFeedback(message.id!, "thumbs_up")}
                           className={`p-1 rounded ${
-                            message.feedback === "thumbs_up" ? "bg-green-100" : ""
+                            message.feedback === "thumbs_up" ? "bg-green-100 text-green-600" : "text-gray-500"
                           }`}
                         >
                           <ThumbsUp className="size-3" />
@@ -2353,7 +2762,7 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
                         <button
                           onClick={() => handleFeedback(message.id!, "thumbs_down")}
                           className={`p-1 rounded ${
-                            message.feedback === "thumbs_down" ? "bg-red-100" : ""
+                            message.feedback === "thumbs_down" ? "bg-red-100 text-red-600" : "text-gray-500"
                           }`}
                         >
                           <ThumbsDown className="size-3" />
@@ -2398,43 +2807,64 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
             </div>
           </div>
 
+          {/* Free Questions Popup - Floating overlay */}
+          {showFreeQuestionsPopup && !localStorage.getItem("userAgreementAccepted") && (
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 animate-fade-in">
+              <div className="bg-purple-500 text-white px-4 py-2 rounded-full text-xs font-semibold shadow-lg">
+                9 free questions remaining
+              </div>
+            </div>
+          )}
+
           {/* Input Area */}
-          <div className="absolute bottom-0 left-0 right-0 bg-card border-t border-border px-4 pb-2 flex items-center gap-2">
-            <button
-              onClick={toggleRecording}
-              className={`p-2.5 rounded-full transition-colors shrink-0 ${
-                isRecording ? "bg-red-500 text-white" : "bg-accent hover:bg-accent/80"
-              }`}
-              title={isRecording ? "Stop recording" : "Start recording"}
-            >
-              <Mic className="size-4" />
-            </button>
+          <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 pt-1 pb-[8px] flex flex-col gap-0.5">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleRecording}
+                className={`p-2.5 rounded-full transition-colors shrink-0 ${
+                  isRecording ? "bg-red-500 text-white" : "bg-gray-200 hover:bg-gray-300"
+                }`}
+                title={isRecording ? "Stop recording" : "Start recording"}
+              >
+                <Mic className={`size-4 ${isRecording ? "" : "text-black"}`} />
+              </button>
 
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask a question..."
-              className="flex-1 px-3 py-2.5 text-sm bg-background border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Ask a question..."
+                className="flex-1 px-3 py-2.5 text-sm bg-white border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary"
+              />
 
-            <button
-              onClick={handlePlusClick}
-              className="p-2.5 rounded-full bg-accent hover:bg-accent/80 transition-colors shrink-0"
-              title="Add question"
-            >
-              <Plus className="size-4" />
-            </button>
+              <button
+                onClick={handlePlusClick}
+                className="p-2.5 rounded-full bg-gray-200 hover:bg-gray-300 transition-colors shrink-0"
+                title="Add question"
+              >
+                <Plus className="size-4 text-black" />
+              </button>
 
-            <button
-              onClick={handleSendMessage}
-              className="p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shrink-0"
-              title="Send message"
-            >
-              <Send className="size-4" />
-            </button>
+              <button
+                onClick={handleSendMessage}
+                className="p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shrink-0"
+                title="Send message"
+              >
+                <Send className="size-4" />
+              </button>
+            </div>
+            
+            {/* Watermark */}
+            <div className="text-center pb-0.5">
+              <strong className="text-gray-300 text-xs tracking-wider">AGENTIC AI LEADERSHIP FOR WORKFORCE DEVELOPMENT</strong>
+            </div>
+          </div>
+
+          {/* AI Team Building Watermark */}
+          <div className="text-center py-2">
+            <strong className="text-gray-400 text-xs tracking-wider">AGENTIC AI LEADERSHIP FOR WORKFORCE DEVELOPMENT</strong>
           </div>
 
           {/* Actionable Summary Screen - Must be inside iPhone viewport */}
@@ -2446,7 +2876,7 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
 
           {/* Pricing/Subscription Modal */}
           {showPricingModal && (
-            <div className="absolute inset-0 bg-white dark:bg-gray-900 z-[80] overflow-y-auto">
+            <div className="absolute inset-0 bg-white z-[80] overflow-y-auto">
               <PricingPage onClose={() => setShowPricingModal(false)} />
             </div>
           )}
@@ -2456,8 +2886,12 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
       {/* Report Issue Modal */}
       <ReportIssueModal 
         isOpen={isReportIssueOpen} 
-        onClose={() => setIsReportIssueOpen(false)}
+        onClose={() => {
+          setIsReportIssueOpen(false);
+          setSubmittedObservation("");
+        }}
         subscriberEmail={subscriberEmail}
+        initialObservation={submittedObservation}
         onSaveReport={(data) => {
           // Open ActionableSummary with the report data
           setShowActionableSummary(true);
@@ -2484,62 +2918,84 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
       {/* Observation Editor Popup */}
       {showObservationPopup && (
         <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
-          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-[360px] border border-border overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[360px] border border-gray-300 overflow-hidden">
             {/* Header */}
-            <div className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
-              <h3 className="font-semibold text-sm">Edit Your Observation</h3>
-              <button
-                onClick={handleObservationCancel}
-                className="p-1 rounded hover:bg-primary-foreground/20 transition-colors"
-              >
-                <X className="size-4" />
-              </button>
+            <div className="bg-black text-white px-4 py-3 flex items-center justify-between">
+              <h3 className="font-semibold text-sm">Quick Observation</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleResetToDefault}
+                  className="p-1 rounded hover:bg-white/20 transition-colors"
+                  title="Reset to Default"
+                >
+                  <RotateCcw className="size-3.5 text-white" />
+                </button>
+                <button
+                  onClick={handleObservationCancel}
+                  className="p-1 rounded hover:bg-white/20 transition-colors"
+                >
+                  <X className="size-4 text-white" />
+                </button>
+              </div>
             </div>
+            
+            {/* Selection Indicator */}
+            {isObservationSelected && (
+              <div className="bg-green-50 border-b border-green-200 px-4 py-2">
+                <p className="text-sm font-medium text-green-700">
+                  1 observations selected
+                </p>
+              </div>
+            )}
             
             {/* Content */}
             <div className="p-4">
-              <p className="text-xs text-muted-foreground mb-3">
-                Edit the default observation or keep it as-is. You can also add your own context below:
+              <p className="text-xs text-gray-600 mb-3">
+                Tell us how your team is using the agent and what needs improvement!
               </p>
               
-              <label className="text-xs font-medium text-foreground mb-1 block">
+              <label className="text-xs font-medium text-gray-900 mb-1 block">
                 Default Observation Template:
               </label>
               <textarea
                 value={observationText}
                 onChange={(e) => setObservationText(e.target.value)}
-                className="w-full h-24 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none mb-3"
+                onFocus={() => setIsObservationSelected(true)}
+                onClick={() => setIsObservationSelected(true)}
+                className="w-full h-24 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none mb-3"
                 placeholder="Enter your observation..."
               />
               
-              <label className="text-xs font-medium text-foreground mb-1 block">
+              <label className="text-xs font-medium text-gray-900 mb-1 block">
                 Additional Context (Optional):
               </label>
               <textarea
                 value={additionalObservation}
                 onChange={(e) => setAdditionalObservation(e.target.value)}
-                className="w-full h-20 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                onFocus={() => setIsObservationSelected(true)}
+                onClick={() => setIsObservationSelected(true)}
+                className="w-full h-20 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 placeholder="Add any additional details or context here..."
               />
               
               <div className="mt-4 flex gap-2">
                 <button
                   onClick={handleObservationCancel}
-                  className="flex-1 px-4 py-2 text-sm font-medium bg-accent hover:bg-accent/80 rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleResetToDefault}
-                  className="flex-1 px-4 py-2 text-sm font-medium bg-accent hover:bg-accent/80 rounded-lg transition-colors"
+                  onClick={handleSendEmail}
+                  className="flex-1 px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                 >
-                  Reset to Default
+                  Send
                 </button>
                 <button
-                  onClick={handleObservationSubmit}
-                  className="flex-1 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-colors"
+                  onClick={handleObservationSubmitToTracker}
+                  className="flex-1 px-4 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
                 >
-                  Use Observation
+                  Submit
                 </button>
               </div>
             </div>
@@ -2549,357 +3005,224 @@ export function AIAgentSidePanel({ isOpen, onClose }: AIAgentSidePanelProps) {
       
       {/* Configuration Instructions Modal */}
       {showConfigInstructions && (
-        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
-          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-[360px] max-h-[700px] border border-border overflow-hidden">
+        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[480px] max-h-[700px] border border-gray-300 overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="bg-yellow-500 text-black px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm">Configuration Instructions</h3>
-              </div>
+              <h3 className="font-semibold text-base">Configuration Instructions</h3>
               <button
                 onClick={() => setShowConfigInstructions(false)}
-                className="p-1 rounded hover:bg-black/10 transition-colors"
+                className="p-1 rounded hover:bg-black/10 active:bg-black/20 transition-colors touch-manipulation"
               >
-                <X className="size-4" />
+                <X className="size-5 text-black" />
               </button>
             </div>
             
             {/* Content */}
             <div className="p-4 overflow-y-auto max-h-[600px]">
-              <p className="text-xs text-muted-foreground mb-4">
+              <p className="text-sm text-gray-600 mb-6">
                 Customize your News, Library, Video, Calendar connections and Subscriber Email for AI reports by typing commands in the chat.
               </p>
               
-              <div className="space-y-4">
-                {/* Configure Context Library Section */}
-                <div className="bg-accent/50 rounded-lg p-3">
-                  <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    <Files className="size-4" /> Configure Context Library:
-                  </h4>
-                  <p className="text-xs text-muted-foreground mb-2">Type or paste in the chat:</p>
-                  <div className="space-y-1.5">
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect library to SharePoint"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect library to OneDrive"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect library to Google Drive"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect library to Salesforce"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "connect library to https://yourcompany.sharepoint.com..."
-                    </code>
+              {/* Configure Context Library */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold mb-3 text-gray-900 flex items-center gap-2">
+                  <Files className="size-4 text-gray-600" /> Configure Context Library:
+                </h4>
+                <p className="text-xs text-gray-600 mb-2">Type or paste in the chat:</p>
+                <div className="space-y-2">
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono">
+                    "connect library to SharePoint"
                   </div>
-                </div>
-                
-                {/* Configure News Section */}
-                <div className="bg-accent/50 rounded-lg p-3">
-                  <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    <Megaphone className="size-4" /> Configure News:
-                  </h4>
-                  <p className="text-xs text-muted-foreground mb-2">Default: War on the Rocks (pre-configured). To change, type:</p>
-                  <div className="space-y-1.5">
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "connect news to https://warontherocks.com/?utm_source=copilot.com"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect news to CNN"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect news to TechCrunch"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "connect news to https://yournewssite.com"
-                    </code>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono">
+                    "connect library to OneDrive"
                   </div>
-                </div>
-                
-                {/* Configure Video Section */}
-                <div className="bg-accent/50 rounded-lg p-3">
-                  <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    <Video className="size-4" /> Configure Video Conferencing:
-                  </h4>
-                  <p className="text-xs text-muted-foreground mb-2">Type or paste in the chat:</p>
-                  <div className="space-y-1.5">
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect video to Microsoft Teams"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect video to FaceTime"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect video to Zoom"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect video to Google Meet"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect video to Webex"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "connect video to https://yourvideoconferencing.com"
-                    </code>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono">
+                    "connect library to Google Drive"
                   </div>
-                </div>
-                
-                {/* Configure Calendar Section */}
-                <div className="bg-accent/50 rounded-lg p-3">
-                  <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    <Calendar className="size-4 dark:stroke-white dark:fill-blue-500" /> Configure Calendar:
-                  </h4>
-                  <p className="text-xs text-muted-foreground mb-2">Type or paste in the chat:</p>
-                  <div className="space-y-1.5">
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect calendar to Calendly"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect calendar to Google Calendar"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect calendar to Outlook"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border">
-                      "connect calendar to Microsoft Calendar"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "connect calendar to https://yourcalendarservice.com"
-                    </code>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono">
+                    "connect library to Salesforce"
                   </div>
-                </div>
-                
-                {/* Add Custom Video Content Section */}
-                <div className="bg-accent/50 rounded-lg p-3">
-                  <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    <Video className="size-4" /> Add Custom Video Content:
-                  </h4>
-                  <p className="text-xs text-muted-foreground mb-2">Add your own videos to the rotation (Premium Feature):</p>
-                  <div className="space-y-1.5">
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "add video https://yoursite.com/video.mp4"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "add video https://storage.example.com/training.mp4"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "include video https://cdn.example.com/content.mp4"
-                    </code>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "connect library to https://yourcompany.sharepoint.com..."
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2 italic">
-                    ℹ️ Custom videos will be added to the video rotation and play alongside default content.
-                  </p>
-                </div>
-                
-                {/* Configure Subscriber Email Section */}
-                <div className="bg-accent/50 rounded-lg p-3">
-                  <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    <Mail className="size-4" /> Configure Subscriber Email (AI Reports):
-                  </h4>
-                  <p className="text-xs text-muted-foreground mb-2">Type or paste in the chat:</p>
-                  <div className="space-y-1.5">
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "set email to yourname@example.com"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "configure subscriber email admin@company.com"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "send reports to support@organization.mil"
-                    </code>
-                  </div>
-                </div>
-                
-                {/* Configure AI Avatar Section */}
-                <div className="bg-accent/50 rounded-lg p-3">
-                  <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    <User className="size-4" /> Configure AI Avatar:
-                  </h4>
-                  <p className="text-xs text-muted-foreground mb-2">Type or paste in the chat:</p>
-                  <div className="space-y-1.5">
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "set avatar id to abc123xyz"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1.5 rounded border border-border text-wrap leading-relaxed">
-                      "configure avatar persona video with professional tone, friendly demeanor, and natural gestures for engaging user interactions with a brief intro of 30-40 words."
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1.5 rounded border border-border text-wrap leading-relaxed">
-                      "configure avatar persona video with professional tone, friendly demeanor, and natural gestures for engaging user interactions with a brief intro of 60-70 words."
-                    </code>
-                  </div>
-                </div>
-                
-                {/* Configure Persona Video Link Section */}
-                <div className="bg-accent/50 rounded-lg p-3">
-                  <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    <LinkIcon className="size-4" /> Configure Persona Video Link:
-                  </h4>
-                  <p className="text-xs text-muted-foreground mb-2">Type or paste in the chat:</p>
-                  <div className="space-y-1.5">
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "set persona video 1 to https://yourpersona.com/profile"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "set persona video 2 link https://yourpersona.com/persona/abc123"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-2 rounded border border-border break-words leading-relaxed">
-                      "set persona video 3 link https://avatar.service.com/v1/persona/xyz789"
-                    </code>
-                  </div>
-                </div>
-                
-                {/* Configure Issue Reporting E-mail Section */}
-                <div className="bg-accent/50 rounded-lg p-3">
-                  <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    <Mail className="size-4" /> Configure Issue Reporting E-mail:
-                  </h4>
-                  <p className="text-xs text-muted-foreground mb-2">Type or paste in the chat:</p>
-                  <div className="space-y-1.5">
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "set issue reporting email to issues@example.com"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "configure issue email support@company.com"
-                    </code>
-                    <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-wrap">
-                      "set issue reporting to security@organization.mil"
-                    </code>
-                  </div>
-                </div>
-                
-                {/* Configure Incident Reporting Mailing Address Section */}
-                <div className="bg-accent/50 rounded-lg p-3">
-                  <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    <AlertTriangle className="size-4" /> Configure Incident Reporting Mailing Address:
-                  </h4>
-                  <p className="text-xs text-muted-foreground mb-2 whitespace-pre-line">DEPARTMENT OF THE NAVY
-HEADQUARTERS UNITED STATES MARINE CORPS
-TRAINING AND EDUCATION COMMAND
-2007 ELLIOT ROAD
-QUANTICO, VA 22134</p>
-                </div>
-                
-                {/* Current Configuration Section */}
-                <div className="bg-primary/10 rounded-lg p-3">
-                  <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    <span className="text-green-600">✓</span> Current Configuration:
-                  </h4>
-                  <div className="space-y-2 text-xs">
-                    <div>
-                      <span className="font-medium">Issue Reporting E-mail:</span>{" "}
-                      <span className="text-muted-foreground">
-                        Not configured
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-medium">News:</span>{" "}
-                      <span className="text-muted-foreground">
-                        {configuredNewsSource ? configuredNewsSource.name : "Not configured"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-medium">Library:</span>{" "}
-                      <span className="text-muted-foreground">
-                        {configuredLibrary ? configuredLibrary.name : "Not configured"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-medium">Video:</span>{" "}
-                      <span className="text-muted-foreground">
-                        {configuredVideo ? configuredVideo.name : "Not configured"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-medium">Calendar:</span>{" "}
-                      <span className="text-muted-foreground">
-                        {configuredCalendar ? configuredCalendar.name : "Not configured"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-medium">Subscriber Email:</span>{" "}
-                      <span className="text-muted-foreground">
-                        {subscriberEmail ? subscriberEmail : "Not configured"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-medium">AI Avatar ID:</span>{" "}
-                      <span className="text-muted-foreground">
-                        Not configured
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-medium">Persona Video Link:</span>{" "}
-                      <span className="text-muted-foreground">
-                        Not configured
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-medium">Incident Reporting Mailing Address:</span>{" "}
-                      <span className="text-green-600 font-medium">
-                        Configured
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Confirmation Messages Section */}
-                <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-3">
-                  <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    <span className="text-green-600">✓</span> Confirmation Messages:
-                  </h4>
-                  <p className="text-xs text-muted-foreground">
-                    When you configure a service, the AI will confirm with a message like:
-                  </p>
-                  <div className="mt-2 space-y-1.5">
-                    <p className="text-xs italic text-green-700 dark:text-green-400">
-                      "✅ Library configured successfully! The Library button will now link to SharePoint..."
-                    </p>
-                    <p className="text-xs italic text-green-700 dark:text-green-400">
-                      "✅ News source configured successfully! The News button will now link to CNN..."
-                    </p>
-                    <p className="text-xs italic text-green-700 dark:text-green-400">
-                      "✅ Video service configured successfully! The Video button will now link to Microsoft Teams..."
-                    </p>
-                    <p className="text-xs italic text-green-700 dark:text-green-400">
-                      "✅ Calendar service configured successfully! The Calendar button will now link to Calendly..."
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Persistence Section */}
-                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3">
-                  <h4 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    <span className="text-green-600">✓</span> Persistence:
-                  </h4>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    <li>• All configurations save to localStorage</li>
-                    <li>• Persists across sessions</li>
-                    <li>• Each button opens configured URL in new tab</li>
-                  </ul>
                 </div>
               </div>
               
-              {/* Subscriber-only notice */}
-              <button
-                onClick={() => {
-                  setShowConfigInstructions(false);
-                  setShowPricingModal(true);
-                }}
-                className="w-full mt-4 p-3 bg-primary/10 hover:bg-primary/20 rounded-lg border border-primary/20 transition-colors cursor-pointer"
-              >
-                <p className="text-xs text-center text-muted-foreground">
-                  ⚠️ This feature is only available to <span className="text-primary font-semibold underline">authenticated subscribers</span>
-                </p>
-              </button>
-              
-              <button
-                onClick={() => setShowConfigInstructions(false)}
-                className="w-full mt-4 px-4 py-2 text-sm font-medium bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg transition-colors"
-              >
-                Got it!
-              </button>
+              {/* Configure News */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold mb-3 text-gray-900 flex items-center gap-2">
+                  <Megaphone className="size-4 text-gray-600" /> Configure News & AI Trends:
+                </h4>
+                <p className="text-xs text-gray-600 mb-2">Type or paste in the chat:</p>
+                <div className="space-y-2">
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "connect news to https://warontherocks.com/?utm_source=copilot.com"
+                  </div>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "connect news to https://yournewssite.com"
+                  </div>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "connect news to https://techcrunch.com"
+                  </div>
+                </div>
+              </div>
+
+              {/* Add Custom Video Content */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold mb-3 text-gray-900 flex items-center gap-2">
+                  <Video className="size-4 text-gray-600" /> Add Custom Video Content:
+                </h4>
+                <p className="text-xs text-gray-600 mb-2">Add your own videos to the rotation (Premium Feature):</p>
+                <div className="space-y-2">
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "add video https://yoursite.com/video.mp4"
+                  </div>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "add video https://storage.example.com/training.mp4"
+                  </div>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "include video https://cdn.example.com/content.mp4"
+                  </div>
+                </div>
+                <div className="mt-3 flex items-start gap-2 text-xs text-gray-500 italic">
+                  <span className="text-blue-500 font-bold">ℹ️</span>
+                  <span>Up to 6 training video fields can be unlocked with upgrade to configure.</span>
+                </div>
+              </div>
+
+              {/* Configure AI Avatar */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold mb-3 text-gray-900 flex items-center gap-2">
+                  <User className="size-4 text-gray-600" /> Configure AI Avatar:
+                </h4>
+                <div className="mb-3">
+                  <label className="text-xs text-gray-600 block mb-1">Avatar Id:</label>
+                  <input
+                    type="text"
+                    placeholder="Enter avatar ID..."
+                    className="w-full px-3 py-2 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <p className="text-xs text-gray-600 mb-2">Type or paste in the chat:</p>
+                <div className="space-y-2">
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "set persona video 1 to https://yourpersona.com/profile"
+                  </div>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "set persona video 2 link https://yourpersona.com/persona/abc123"
+                  </div>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "set persona video 3 link https://avatar.service.com/v1/persona/xyz789"
+                  </div>
+                </div>
+              </div>
+
+              {/* Featured Training Video Series */}
+              <div className="mb-6 relative">
+                <h4 className="text-sm font-semibold mb-3 text-gray-900 flex items-center gap-2">
+                  <Video className="size-4 text-gray-600" /> Featured Training Video Series:
+                  <Lock className="size-3 text-amber-600" />
+                </h4>
+                <div className="space-y-2 opacity-50 pointer-events-none">
+                  <div>
+                    <label className="text-xs text-gray-600 block mb-1">Training Video 1:</label>
+                    <input
+                      type="url"
+                      placeholder="https://example.com/training-video-1.mp4"
+                      className="w-full px-3 py-2 text-xs border border-gray-300 rounded bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600 block mb-1">Training Video 2:</label>
+                    <input
+                      type="url"
+                      placeholder="https://example.com/training-video-2.mp4"
+                      className="w-full px-3 py-2 text-xs border border-gray-300 rounded bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600 block mb-1">Training Video 3:</label>
+                    <input
+                      type="url"
+                      placeholder="https://example.com/training-video-3.mp4"
+                      className="w-full px-3 py-2 text-xs border border-gray-300 rounded bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600 block mb-1">Training Video 4:</label>
+                    <input
+                      type="url"
+                      placeholder="https://example.com/training-video-4.mp4"
+                      className="w-full px-3 py-2 text-xs border border-gray-300 rounded bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600 block mb-1">Training Video 5:</label>
+                    <input
+                      type="url"
+                      placeholder="https://example.com/training-video-5.mp4"
+                      className="w-full px-3 py-2 text-xs border border-gray-300 rounded bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600 block mb-1">Training Video 6:</label>
+                    <input
+                      type="url"
+                      placeholder="https://example.com/training-video-6.mp4"
+                      className="w-full px-3 py-2 text-xs border border-gray-300 rounded bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled
+                    />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-start gap-2 text-xs text-gray-500 italic">
+                  <span className="text-amber-600 font-bold">🔒</span>
+                  <span>Premium Feature: Subscribe to unlock and configure up to 6 featured training videos.</span>
+                </div>
+              </div>
+
+              {/* Configure Issue Reporting E-mail */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold mb-3 text-gray-900 flex items-center gap-2">
+                  <Mail className="size-4 text-gray-600" /> Configure Issue Reporting E-mail:
+                </h4>
+                <p className="text-xs text-gray-600 mb-2">Type or paste in the chat:</p>
+                <div className="space-y-2">
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "set issue reporting email to support@example.com"
+                  </div>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "configure issue reporting email admin@company.com"
+                  </div>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "send issue reports to bugs@organization.mil"
+                  </div>
+                </div>
+              </div>
+
+              {/* Reporting Address for Written After Action Reports and Incidents */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold mb-3 text-gray-900 flex items-center gap-2">
+                  <FileText className="size-4 text-gray-600" /> Reporting Address for Written After Action Reports and Incidents:
+                </h4>
+                <p className="text-xs text-gray-600 mb-2">Type or paste in the chat:</p>
+                <div className="space-y-2">
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "set AAR reporting address to aar.reports@example.com"
+                  </div>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "configure incident reporting address incidents@organization.mil"
+                  </div>
+                  <div className="text-xs bg-gray-100 px-3 py-2 rounded border border-gray-300 font-mono break-words">
+                    "send after action reports to reports@company.com"
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2920,7 +3243,7 @@ QUANTICO, VA 22134</p>
                 }}
                 className="p-1 rounded hover:bg-white/10 transition-colors"
               >
-                <X className="size-4" />
+                <X className="size-4 text-gray-600" />
               </button>
             </div>
             
@@ -2951,7 +3274,7 @@ QUANTICO, VA 22134</p>
                   <>
                     <button
                       onClick={handleEditObservation}
-                      className="flex-1 px-4 py-2 text-sm font-medium bg-accent hover:bg-accent/80 text-foreground rounded-lg transition-colors"
+                      className="flex-1 px-4 py-2 text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg transition-colors"
                     >
                       Edit
                     </button>
