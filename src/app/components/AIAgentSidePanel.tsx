@@ -32,6 +32,7 @@
  * 2. Thought bubble text is BLACK (!text-black), never white
  * 3. Feedback thumbs buttons are GRAY (text-gray-500) when not selected
  * 4. Web links display with UNDERLINE and DARK BLUE color (text-blue-800)
+ * 5. Forms inside the agent (Quick Observation, etc.) display in DARK MODE
  * ============================================================================
  */
 
@@ -118,6 +119,7 @@ export function AIAgentSidePanel({ isOpen, onClose, onShowConsentModal }: AIAgen
   const [recognition, setRecognition] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isVideoVisible, setIsVideoVisible] = useState(true);
+  const [isVideoExpanded, setIsVideoExpanded] = useState(false);
   const [isReportIssueOpen, setIsReportIssueOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [showObservationPopup, setShowObservationPopup] = useState(false);
@@ -2654,11 +2656,11 @@ export function AIAgentSidePanel({ isOpen, onClose, onShowConsentModal }: AIAgen
                 setIsCollaborating(false);
                 setCurrentCollaboratingAgents([]);
               }}
-              className="p-1.5 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors flex items-center gap-1"
+              className="p-1.5 rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-1"
               title="Clear chat"
             >
-              <Trash2 className="size-3.5 text-purple-600 dark:text-purple-400" />
-              <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">Clear Chat</span>
+              <Trash2 className="size-3.5 text-purple-600" />
+              <span className="text-xs text-purple-600 font-medium">Clear Chat</span>
             </button>
             <button
               onClick={() => setIsVideoVisible(!isVideoVisible)}
@@ -2686,7 +2688,10 @@ export function AIAgentSidePanel({ isOpen, onClose, onShowConsentModal }: AIAgen
                 playsInline
                 controls
                 onEnded={handleVideoEnd}
-                onClick={handleVideoClick}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsVideoExpanded(true);
+                }}
               />
             </div>
           ) : null}
@@ -2716,20 +2721,20 @@ export function AIAgentSidePanel({ isOpen, onClose, onShowConsentModal }: AIAgen
               
               {/* Multi-Agent Feature Hint */}
               {messages.length === 0 && showMultiAgentMessage && (
-                <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-2 border-purple-300 dark:border-purple-700 rounded-xl p-3">
+                <div className="bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-300 rounded-xl p-3">
                   <div className="flex items-start gap-2">
                     <Brain className="size-5 text-gray-600 mt-0.5 flex-shrink-0" />
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-bold text-xs text-gray-900 dark:text-black">
+                        <h4 className="font-bold text-xs text-gray-900">
                           Multi-Agent Collaboration Available
                         </h4>
                         <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                           NEW!
                         </span>
                       </div>
-                      <p className="text-xs text-gray-700 dark:text-black leading-relaxed">
-                        Try asking about compliance, legal, budget, or hiring to see specialist agents collaborate on your question! Click the <Settings className="inline size-3 text-purple-600 dark:text-purple-400" /> icon above to manage connections. Visit Multi-Agent Features in the header to learn more.
+                      <p className="text-xs text-gray-700 leading-relaxed">
+                        Try asking about compliance, legal, budget, or hiring to see specialist agents collaborate on your question! Click the <Settings className="inline size-3 text-purple-600" /> icon above to manage connections. Visit Multi-Agent Features in the header to learn more.
                       </p>
                     </div>
                   </div>
@@ -2918,7 +2923,7 @@ export function AIAgentSidePanel({ isOpen, onClose, onShowConsentModal }: AIAgen
       {/* Observation Editor Popup */}
       {showObservationPopup && (
         <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[360px] border border-gray-300 overflow-hidden">
+          <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-[360px] border border-gray-700 overflow-hidden">
             {/* Header */}
             <div className="bg-black text-white px-4 py-3 flex items-center justify-between">
               <h3 className="font-semibold text-sm">Quick Observation</h3>
@@ -2941,8 +2946,8 @@ export function AIAgentSidePanel({ isOpen, onClose, onShowConsentModal }: AIAgen
             
             {/* Selection Indicator */}
             {isObservationSelected && (
-              <div className="bg-green-50 border-b border-green-200 px-4 py-2">
-                <p className="text-sm font-medium text-green-700">
+              <div className="bg-green-900/50 border-b border-green-700 px-4 py-2">
+                <p className="text-sm font-medium text-green-300">
                   1 observations selected
                 </p>
               </div>
@@ -2950,11 +2955,11 @@ export function AIAgentSidePanel({ isOpen, onClose, onShowConsentModal }: AIAgen
             
             {/* Content */}
             <div className="p-4">
-              <p className="text-xs text-gray-600 mb-3">
+              <p className="text-xs text-gray-300 mb-3">
                 Tell us how your team is using the agent and what needs improvement!
               </p>
               
-              <label className="text-xs font-medium text-gray-900 mb-1 block">
+              <label className="text-xs font-medium text-gray-200 mb-1 block">
                 Default Observation Template:
               </label>
               <textarea
@@ -2962,11 +2967,11 @@ export function AIAgentSidePanel({ isOpen, onClose, onShowConsentModal }: AIAgen
                 onChange={(e) => setObservationText(e.target.value)}
                 onFocus={() => setIsObservationSelected(true)}
                 onClick={() => setIsObservationSelected(true)}
-                className="w-full h-24 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none mb-3"
+                className="w-full h-24 px-3 py-2 text-sm bg-gray-800 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none mb-3 placeholder:text-gray-500"
                 placeholder="Enter your observation..."
               />
               
-              <label className="text-xs font-medium text-gray-900 mb-1 block">
+              <label className="text-xs font-medium text-gray-200 mb-1 block">
                 Additional Context (Optional):
               </label>
               <textarea
@@ -2974,14 +2979,14 @@ export function AIAgentSidePanel({ isOpen, onClose, onShowConsentModal }: AIAgen
                 onChange={(e) => setAdditionalObservation(e.target.value)}
                 onFocus={() => setIsObservationSelected(true)}
                 onClick={() => setIsObservationSelected(true)}
-                className="w-full h-20 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                className="w-full h-20 px-3 py-2 text-sm bg-gray-800 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-gray-500"
                 placeholder="Add any additional details or context here..."
               />
               
               <div className="mt-4 flex gap-2">
                 <button
                   onClick={handleObservationCancel}
-                  className="flex-1 px-4 py-2 text-sm font-medium bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -3296,6 +3301,30 @@ export function AIAgentSidePanel({ isOpen, onClose, onShowConsentModal }: AIAgen
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Expanded Video Overlay */}
+      {isVideoExpanded && (
+        <div 
+          className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center"
+          onClick={() => setIsVideoExpanded(false)}
+        >
+          <button
+            onClick={() => setIsVideoExpanded(false)}
+            className="absolute top-4 right-4 z-[70] p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            title="Close expanded video"
+          >
+            <X className="size-6" />
+          </button>
+          <video
+            src={currentVideo}
+            className="max-w-[90vw] max-h-[90vh] w-auto h-auto"
+            autoPlay
+            playsInline
+            controls
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>
