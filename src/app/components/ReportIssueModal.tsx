@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X, Mic, Calendar, Clock } from "lucide-react";
 import { ReviewEditModal } from "./ReviewEditModal";
 
@@ -7,6 +7,7 @@ interface ReportIssueModalProps {
   onClose: () => void;
   subscriberEmail: string;
   onSaveReport?: (data: any) => void;
+  initialObservation?: string;
 }
 
 const sentimentOptions = [
@@ -37,9 +38,9 @@ const sentimentOptions = [
   { emoji: "⚠️", label: "Unsafe" },
 ];
 
-export function ReportIssueModal({ isOpen, onClose, subscriberEmail, onSaveReport }: ReportIssueModalProps) {
+export function ReportIssueModal({ isOpen, onClose, subscriberEmail, onSaveReport, initialObservation }: ReportIssueModalProps) {
   const [topic, setTopic] = useState("AI Bias or Risk");
-  const [observation, setObservation] = useState("I saw several participants struggling to navigate the information system during the event. Most were unable to locate and share critical information in a timely manner and mistakes were made. This can compromise data quality, integrity and availability of information.");
+  const [observation, setObservation] = useState(initialObservation || "I saw several participants struggling to navigate the information system during the event. Most were unable to locate and share critical information in a timely manner and mistakes were made. This can compromise data quality, integrity and availability of information.");
   const [type, setType] = useState<"event" | "routine">("event");
   const [pointOfContact, setPointOfContact] = useState("");
   const [location, setLocation] = useState("Jacksonville, NC (Camp Lejeune)");
@@ -48,6 +49,13 @@ export function ReportIssueModal({ isOpen, onClose, subscriberEmail, onSaveRepor
   const [topicReady, setTopicReady] = useState(true);
   const [isReviewEditOpen, setIsReviewEditOpen] = useState(false);
   const observationRef = useRef<HTMLTextAreaElement>(null);
+
+  // Update observation when initialObservation prop changes
+  useEffect(() => {
+    if (initialObservation) {
+      setObservation(initialObservation);
+    }
+  }, [initialObservation]);
 
   if (!isOpen && !isReviewEditOpen) return null;
 
@@ -77,26 +85,23 @@ export function ReportIssueModal({ isOpen, onClose, subscriberEmail, onSaveRepor
       <div className="relative w-full max-w-[393px] h-[852px] bg-white rounded-[3rem] shadow-2xl border-8 border-gray-800 overflow-hidden">
         <div className="relative w-full h-full bg-white flex flex-col overflow-y-auto">
           {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-start justify-between">
-            <div className="flex-1 pr-8">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Share Observation or<br />
-                Report AI Issue
-              </h2>
-            </div>
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-[21px] pt-[22px] pb-2 flex items-end justify-between">
+            <h2 className="text-base font-semibold text-gray-900">
+              Report AI Issue
+            </h2>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
+              className="p-1 hover:bg-gray-100 rounded-md transition-colors shrink-0"
             >
               <X className="size-5 text-gray-600" />
             </button>
           </div>
 
           {/* Form Content */}
-          <div className="flex-1 px-6 py-2 space-y-4">
+          <div className="flex-1 px-[21px] py-1 space-y-2.5">
             {/* Topic */}
             <div>
-              <label className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-2">
+              <label className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-0">
                 Topic <span className="text-red-500">*</span>
                 {topicReady && (
                   <span className="flex items-center gap-1 text-green-600 text-xs font-medium">
@@ -108,7 +113,7 @@ export function ReportIssueModal({ isOpen, onClose, subscriberEmail, onSaveRepor
               <select
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 <option>AI Bias or Risk</option>
                 <option>System Performance</option>
@@ -121,7 +126,7 @@ export function ReportIssueModal({ isOpen, onClose, subscriberEmail, onSaveRepor
 
             {/* Observation */}
             <div>
-              <label className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1">
+              <label className="text-sm font-semibold text-gray-900 mb-0 flex items-center gap-1">
                 Observation <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -130,11 +135,11 @@ export function ReportIssueModal({ isOpen, onClose, subscriberEmail, onSaveRepor
                   value={observation}
                   onChange={(e) => setObservation(e.target.value)}
                   placeholder="I saw several participants struggling to navigate the information system during the event. Most were unable to locate and share critical information in a timely manner and mistakes were made. This can compromise data quality, integrity and availability of information."
-                  className="w-full px-4 py-3 pr-12 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none h-32"
+                  className="w-full px-4 py-2.5 pr-12 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none h-28"
                 />
                 <button
                   onClick={toggleRecording}
-                  className={`absolute bottom-3 right-3 p-2 rounded-full transition-colors ${
+                  className={`absolute bottom-2.5 right-2.5 p-2 rounded-full transition-colors ${
                     isRecording ? "bg-red-500 text-white" : "bg-gray-100 hover:bg-gray-200"
                   }`}
                   title={isRecording ? "Stop recording" : "Start voice recording"}
@@ -145,14 +150,14 @@ export function ReportIssueModal({ isOpen, onClose, subscriberEmail, onSaveRepor
             </div>
 
             {/* Type */}
-            <div className="-mt-2">
-              <label className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1">
+            <div>
+              <label className="text-sm font-semibold text-gray-900 mb-0 flex items-center gap-1">
                 Type <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setType("event")}
-                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-colors ${
                     type === "event"
                       ? "bg-black text-white"
                       : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
@@ -163,7 +168,7 @@ export function ReportIssueModal({ isOpen, onClose, subscriberEmail, onSaveRepor
                 </button>
                 <button
                   onClick={() => setType("routine")}
-                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-colors ${
                     type === "routine"
                       ? "bg-black text-white"
                       : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
@@ -175,29 +180,15 @@ export function ReportIssueModal({ isOpen, onClose, subscriberEmail, onSaveRepor
               </div>
             </div>
 
-            {/* Point of Contact */}
-            <div>
-              <label className="text-sm font-semibold text-gray-900 mb-2 block">
-                Point of Contact (Optional)
-              </label>
-              <input
-                type="text"
-                value={pointOfContact}
-                onChange={(e) => setPointOfContact(e.target.value)}
-                placeholder="Phone representative, event organizer, or witness"
-                className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
             {/* Location */}
             <div>
-              <label className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1">
+              <label className="text-sm font-semibold text-gray-900 mb-0 flex items-center gap-1">
                 Location <span className="text-red-500">*</span>
               </label>
               <select
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 <option>Jacksonville, NC (Camp Lejeune)</option>
                 <option>San Diego, CA (Camp Pendleton)</option>
@@ -211,7 +202,7 @@ export function ReportIssueModal({ isOpen, onClose, subscriberEmail, onSaveRepor
 
             {/* Sentiment */}
             <div>
-              <label className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-1">
+              <label className="text-sm font-semibold text-gray-900 mb-0.5 flex items-center gap-1">
                 Tap a sentiment about your observation <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-5 gap-2">
@@ -219,7 +210,7 @@ export function ReportIssueModal({ isOpen, onClose, subscriberEmail, onSaveRepor
                   <button
                     key={sentiment.label}
                     onClick={() => setSelectedSentiment(sentiment.label)}
-                    className={`flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all ${
+                    className={`flex flex-col items-center justify-center px-[9px] pt-[3px] pb-[5px] rounded-md border-2 transition-all ${
                       selectedSentiment === sentiment.label
                         ? "border-blue-500 bg-blue-50"
                         : "border-gray-200 hover:border-gray-300 bg-white"
@@ -239,7 +230,7 @@ export function ReportIssueModal({ isOpen, onClose, subscriberEmail, onSaveRepor
             <button
               onClick={handleSubmit}
               disabled={!observation || !selectedSentiment}
-              className="w-full py-3.5 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-green-600 text-white rounded-md font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Save Observation
             </button>

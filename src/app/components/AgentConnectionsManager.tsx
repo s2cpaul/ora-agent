@@ -32,19 +32,27 @@ const TIER_LIMITS = {
 
 const SAMPLE_AGENT_MARKETPLACE = [
   {
-    name: 'Legal Advisor',
-    type: 'REST_API' as const,
-    specialty: 'Corporate Law & Compliance',
-    description: 'Specialized in corporate governance, contracts, and regulatory compliance',
-    capabilities: ['contract review', 'compliance checking', 'legal research', 'risk assessment']
+    name: 'AI Engineer',
+    type: 'LLM_DIRECT' as const,
+    specialty: 'Information Architecture & Technology',
+    description: 'Expert in system architecture, technical strategy, and engineering leadership',
+    capabilities: ['architecture design', 'tech stack selection', 'scalability planning', 'security review'],
+    avatar: '🔧'
   },
   {
-    name: 'HR Strategist',
+    name: 'Workforce Development',
     type: 'MCP' as const,
     specialty: 'Human Resources & Talent',
     description: 'Expert in organizational development, talent management, and HR policy',
     capabilities: ['hiring strategies', 'performance management', 'culture building', 'conflict resolution'],
     avatar: '👥'
+  },
+  {
+    name: 'Legal Advisor',
+    type: 'REST_API' as const,
+    specialty: 'Corporate Law & Compliance',
+    description: 'Specialized in corporate governance, contracts, and regulatory compliance',
+    capabilities: ['contract review', 'compliance checking', 'legal research', 'risk assessment']
   },
   {
     name: 'Financial Analyst',
@@ -55,14 +63,6 @@ const SAMPLE_AGENT_MARKETPLACE = [
     avatar: '💰'
   },
   {
-    name: 'Tech Architect',
-    type: 'LLM_DIRECT' as const,
-    specialty: 'Technology & Engineering',
-    description: 'Expert in system architecture, technical strategy, and engineering leadership',
-    capabilities: ['architecture design', 'tech stack selection', 'scalability planning', 'security review'],
-    avatar: '🔧'
-  },
-  {
     name: 'Data Scientist',
     type: 'MCP' as const,
     specialty: 'Analytics & Insights',
@@ -71,7 +71,7 @@ const SAMPLE_AGENT_MARKETPLACE = [
     avatar: '📊'
   },
   {
-    name: 'Marketing Maven',
+    name: 'Communications & Outreach',
     type: 'WEBHOOK' as const,
     specialty: 'Marketing & Growth',
     description: 'Expert in brand strategy, growth marketing, and customer acquisition',
@@ -157,66 +157,60 @@ export function AgentConnectionsManager({ isOpen, onClose, currentTier, onUpgrad
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[110] p-3 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl w-full max-w-[820px] max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-2xl border-b border-purple-700 z-10">
+        <div className="sticky top-0 bg-gray-50 border-b border-gray-200 p-3 sm:p-4 rounded-t-2xl z-10">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-lg transition-colors"
+            className="absolute top-3 right-3 p-1.5 hover:bg-gray-200 active:bg-gray-300 rounded-lg transition-colors touch-manipulation"
             aria-label="Close"
           >
-            <X className="size-5" />
+            <X className="size-4 text-gray-600" />
           </button>
           
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-white/20 p-2 rounded-lg">
-              <Brain className="size-6 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="bg-gray-700 p-1.5 rounded-lg">
+                <Brain className="size-4 text-white" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900">Agent Connections</h2>
+                <p className="text-xs text-gray-500">Multi-agent system</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-bold">Agent Connections</h2>
-              <p className="text-sm text-purple-100">Multi-agent collaboration system</p>
-            </div>
-          </div>
-
-          {/* Usage Stats */}
-          <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Connections Used</span>
-              <span className="text-lg font-bold">
+            
+            {/* Inline Usage Stats */}
+            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-1.5">
+              <span className="text-xs text-gray-600">
                 {connections.length} / {maxConnections === 999 ? '∞' : maxConnections}
               </span>
+              <span className="text-xs text-gray-400">•</span>
+              <span className="text-xs font-medium text-gray-700">
+                {currentTier}
+              </span>
             </div>
-            <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden">
-              <div 
-                className="bg-white h-full rounded-full transition-all"
-                style={{ width: `${maxConnections === 999 ? 100 : (connections.length / maxConnections) * 100}%` }}
-              />
-            </div>
-            <p className="text-xs text-purple-100 mt-2">
-              {currentTier} Plan: {maxConnections === 999 ? 'Unlimited' : `Up to ${maxConnections}`} agent connections
-            </p>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Free Tier Upgrade Prompt */}
           {currentTier === 'Free' && (
-            <div className="bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-300 rounded-xl p-5">
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-300 rounded-xl p-4 sm:p-5">
               <div className="flex items-start gap-3">
-                <Sparkles className="size-6 text-purple-600 mt-0.5 flex-shrink-0" />
+                <Sparkles className="size-5 sm:size-6 text-purple-600 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <h3 className="font-bold text-lg text-gray-900 mb-2">
+                  <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-2">
                     Unlock Multi-Agent Collaboration
                   </h3>
-                  <p className="text-sm text-gray-700 mb-4">
+                  <p className="text-xs sm:text-sm text-gray-700 mb-3 sm:mb-4">
                     Connect ORA with specialized AI agents to handle complex questions across different domains. 
                     Free users can view this feature but need to upgrade to connect agents.
                   </p>
                   <button
                     onClick={onUpgradeClick}
-                    className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors text-sm"
+                    className="px-4 sm:px-5 py-2 sm:py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors text-xs sm:text-sm"
                   >
                     Upgrade to Pro →
                   </button>
@@ -225,13 +219,22 @@ export function AgentConnectionsManager({ isOpen, onClose, currentTier, onUpgrad
             </div>
           )}
 
+          {/* Subscribe Now Button */}
+          <button
+            onClick={onUpgradeClick}
+            className="w-full px-5 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-purple-600 via-violet-600 to-purple-700 hover:from-purple-700 hover:via-violet-700 hover:to-purple-800 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 sm:gap-3 shadow-[0_8px_30px_rgb(147,51,234,0.3)] hover:shadow-[0_12px_40px_rgb(147,51,234,0.4)] hover:scale-[1.02] active:scale-[0.98] text-base sm:text-lg"
+          >
+            <Sparkles className="size-5 sm:size-6" />
+            Subscribe Now
+          </button>
+
           {/* Action Buttons */}
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <button
               onClick={() => setShowMarketplace(!showMarketplace)}
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg"
+              className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 bg-black hover:bg-gray-800 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg text-sm"
             >
-              <Sparkles className="size-5" />
+              <Sparkles className="size-4 sm:size-5" />
               Browse Agent Marketplace
             </button>
             <button
@@ -242,52 +245,52 @@ export function AgentConnectionsManager({ isOpen, onClose, currentTier, onUpgrad
                 }
                 setShowAddAgent(!showAddAgent);
               }}
-              className={`px-4 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
                 canAddMore 
                   ? 'bg-gray-100 hover:bg-gray-200 text-gray-900 border-2 border-gray-300' 
                   : 'bg-gray-100 text-gray-400 border-2 border-gray-200 cursor-not-allowed'
               }`}
             >
-              <Plus className="size-5" />
+              <Plus className="size-4 sm:size-5" />
               Custom Agent
             </button>
           </div>
 
           {/* Marketplace */}
           {showMarketplace && (
-            <div className="bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-300 rounded-xl p-5">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                <Sparkles className="size-5 text-purple-600" />
+            <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-4 sm:p-5">
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                <Sparkles className="size-4 sm:size-5 text-gray-700" />
                 Available Agents
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 {SAMPLE_AGENT_MARKETPLACE.map((agent, idx) => (
                   <div
                     key={idx}
-                    className="bg-white border-2 border-gray-200 hover:border-purple-400 rounded-lg p-4 transition-all cursor-pointer group"
+                    className="bg-white border-2 border-gray-200 hover:border-gray-900 rounded-lg p-3 sm:p-4 transition-all cursor-pointer group"
                     onClick={() => handleAddFromMarketplace(agent)}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="text-3xl">{agent.avatar}</div>
-                      <div className="flex-1">
-                        <h4 className="font-bold text-gray-900">{agent.name}</h4>
-                        <p className="text-xs text-purple-600 font-medium mb-1">{agent.specialty}</p>
-                        <p className="text-xs text-gray-600 mb-2">{agent.description}</p>
-                        <div className="flex flex-wrap gap-1">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <div className="text-2xl sm:text-3xl">{agent.avatar}</div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-sm sm:text-base text-gray-900">{agent.name}</h4>
+                        <p className="text-[10px] sm:text-xs text-gray-600 font-medium mb-1">{agent.specialty}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-600 mb-2 line-clamp-2">{agent.description}</p>
+                        <div className="flex flex-wrap gap-0.5">
                           {agent.capabilities.slice(0, 3).map((cap, i) => (
-                            <span key={i} className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
+                            <span key={i} className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded-full">
                               {cap}
                             </span>
                           ))}
                           {agent.capabilities.length > 3 && (
-                            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
+                            <span className="text-[9px] px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded-full">
                               +{agent.capabilities.length - 3} more
                             </span>
                           )}
                         </div>
                       </div>
-                      <div className="text-purple-600 group-hover:text-purple-700">
-                        <Plus className="size-5" />
+                      <div className="text-gray-600 group-hover:text-gray-900">
+                        <Plus className="size-4 sm:size-5" />
                       </div>
                     </div>
                   </div>
@@ -363,86 +366,59 @@ export function AgentConnectionsManager({ isOpen, onClose, currentTier, onUpgrad
                 {connections.map((connection) => (
                   <div
                     key={connection.id}
-                    className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-purple-300 transition-all"
+                    className="bg-white border border-gray-200 rounded-lg p-3 hover:border-gray-400 transition-all"
                   >
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-3">
                       {connection.avatar && (
-                        <div className="text-4xl">{connection.avatar}</div>
+                        <div className="text-2xl">{connection.avatar}</div>
                       )}
                       
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-sm text-gray-900 flex items-center gap-1.5">
                               {connection.name}
                               {connection.status === 'active' && (
-                                <CheckCircle className="size-4 text-green-600" />
-                              )}
-                              {connection.status === 'error' && (
-                                <AlertCircle className="size-4 text-red-600" />
+                                <CheckCircle className="size-3.5 text-green-600 flex-shrink-0" />
                               )}
                             </h4>
-                            <p className="text-xs text-purple-600 font-medium">{connection.specialty}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                              connection.status === 'active' 
-                                ? 'bg-green-100 text-green-700' 
-                                : connection.status === 'error'
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-gray-100 text-gray-700'
-                            }`}>
-                              {connection.status}
-                            </span>
+                            <p className="text-[10px] text-gray-600 mt-0.5">{connection.specialty}</p>
                           </div>
                         </div>
 
-                        <p className="text-sm text-gray-600 mb-3">{connection.description}</p>
-
-                        <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                          <div className="flex items-center gap-1 text-gray-600">
+                        <div className="flex items-center gap-3 text-[10px] text-gray-600 mb-2">
+                          <span className="flex items-center gap-1">
                             <Zap className="size-3" />
-                            <span className="font-medium">Type:</span> {connection.type}
-                          </div>
-                          <div className="flex items-center gap-1 text-gray-600">
+                            {connection.type}
+                          </span>
+                          <span className="flex items-center gap-1">
                             <Shield className="size-3" />
-                            <span className="font-medium">Auth:</span> {connection.authMethod}
-                          </div>
+                            {connection.authMethod}
+                          </span>
                         </div>
 
-                        <div className="mb-3">
-                          <p className="text-xs font-medium text-gray-700 mb-2">Capabilities:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {connection.capabilities.map((cap, idx) => (
-                              <span
-                                key={idx}
-                                className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full"
-                              >
-                                {cap}
-                              </span>
-                            ))}
-                          </div>
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {connection.capabilities.map((cap, idx) => (
+                            <span
+                              key={idx}
+                              className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full"
+                            >
+                              {cap}
+                            </span>
+                          ))}
                         </div>
 
-                        <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleTestConnection(connection.id)}
-                            className="px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
+                            className="px-2 py-1 bg-black hover:bg-gray-800 text-white rounded text-[10px] font-medium transition-colors"
                           >
-                            <Zap className="size-3" />
-                            Test Connection
-                          </button>
-                          <button
-                            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
-                          >
-                            <Settings className="size-3" />
-                            Configure
+                            Test
                           </button>
                           <button
                             onClick={() => handleRemoveConnection(connection.id)}
-                            className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ml-auto"
+                            className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-[10px] font-medium transition-colors"
                           >
-                            <Trash2 className="size-3" />
                             Remove
                           </button>
                         </div>
@@ -455,9 +431,9 @@ export function AgentConnectionsManager({ isOpen, onClose, currentTier, onUpgrad
           </div>
 
           {/* Info Section */}
-          <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4">
+          <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-4">
             <h4 className="font-bold text-sm text-gray-900 mb-2 flex items-center gap-2">
-              <Lock className="size-4 text-blue-600" />
+              <Lock className="size-4 text-gray-700" />
               Security & Privacy
             </h4>
             <p className="text-xs text-gray-700">

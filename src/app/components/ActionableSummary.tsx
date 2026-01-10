@@ -36,15 +36,15 @@ export function ActionableSummary({
 
   return (
     <>
-      <div className="absolute inset-0 bg-white dark:bg-gray-900 z-[70] overflow-y-auto">
+      <div className="absolute inset-0 bg-white z-[70] overflow-y-auto">
         {/* Content Container */}
-        <div className="w-full h-full px-3 py-4">
+        <div className="w-full h-full px-3 py-3">
           {/* Header */}
-          <div className="mb-3">
-            <h1 className="text-base font-bold text-center mb-2 text-gray-900 dark:text-white">Actionable Summary</h1>
+          <div className="mb-2">
+            <h1 className="text-base font-bold text-center mb-1.5 text-gray-900">Actionable Summary</h1>
             
             {/* Date */}
-            <div className="flex items-center gap-1.5 text-[11px] text-gray-600 dark:text-gray-400 mb-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-gray-600 mb-2">
               <Calendar className="size-3.5" />
               <span>{date}</span>
             </div>
@@ -52,16 +52,16 @@ export function ActionableSummary({
 
           {/* Observation Section */}
           <div className="mb-3">
-            <h2 className="text-sm font-bold mb-1.5 text-gray-900 dark:text-white">Observation:</h2>
-            <p className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
+            <h2 className="text-sm font-bold mb-1.5 text-gray-900">Observation:</h2>
+            <p className="text-xs text-gray-700 leading-snug">
               {observation}
             </p>
           </div>
 
           {/* Recommendation Section */}
           <div className="mb-4">
-            <h2 className="text-sm font-bold mb-1.5 text-gray-900 dark:text-white">Recommendation:</h2>
-            <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug space-y-2">
+            <h2 className="text-sm font-bold mb-1.5 text-black">Recommendation:</h2>
+            <div className="text-xs text-black leading-snug space-y-2">
               {recommendation.split('\n\n').map((paragraph, index) => (
                 <p key={index}>{paragraph}</p>
               ))}
@@ -69,53 +69,53 @@ export function ActionableSummary({
           </div>
 
           {/* Metadata */}
-          <div className="space-y-1.5 mb-4">
+          <div className="space-y-1.5 mb-6">
             <div className="flex items-start gap-1.5">
-              <span className="text-xs text-gray-900 dark:text-white">•</span>
+              <span className="text-xs text-gray-900">•</span>
               <div className="flex gap-1.5 flex-wrap">
-                <span className="font-bold text-xs text-gray-900 dark:text-white">Topic:</span>
-                <span className="text-xs text-gray-700 dark:text-gray-300">{topic}</span>
+                <span className="font-bold text-xs text-gray-900">Topic:</span>
+                <span className="text-xs text-gray-700">{topic}</span>
               </div>
             </div>
             
             <div className="flex items-start gap-1.5">
-              <span className="text-xs text-gray-900 dark:text-white">•</span>
+              <span className="text-xs text-gray-900">•</span>
               <div className="flex gap-1.5 flex-wrap">
-                <span className="font-bold text-xs text-gray-900 dark:text-white">Event Type:</span>
-                <span className="text-xs text-gray-700 dark:text-gray-300">{eventType}</span>
+                <span className="font-bold text-xs text-gray-900">Event Type:</span>
+                <span className="text-xs text-gray-700">{eventType}</span>
               </div>
             </div>
             
             <div className="flex items-start gap-1.5">
-              <span className="text-xs text-gray-900 dark:text-white">•</span>
+              <span className="text-xs text-gray-900">•</span>
               <div className="flex gap-1.5 flex-wrap">
-                <span className="font-bold text-xs text-gray-900 dark:text-white">Sentiment:</span>
-                <span className="text-xs text-gray-700 dark:text-gray-300">{sentiment}</span>
+                <span className="font-bold text-xs text-gray-900">Sentiment:</span>
+                <span className="text-xs text-gray-700">{sentiment}</span>
               </div>
             </div>
             
             <div className="flex items-start gap-1.5">
-              <span className="text-xs text-gray-900 dark:text-white">•</span>
+              <span className="text-xs text-gray-900">•</span>
               <div className="flex gap-1.5 flex-wrap">
-                <span className="font-bold text-xs text-gray-900 dark:text-white">Location:</span>
-                <span className="text-xs text-gray-700 dark:text-gray-300">{location}</span>
+                <span className="font-bold text-xs text-gray-900">Location:</span>
+                <span className="text-xs text-gray-700">{location}</span>
               </div>
             </div>
 
             <div className="mt-2 space-y-1 ml-3">
               <div className="flex items-start gap-1.5">
-                <span className="text-xs text-gray-900 dark:text-white">•</span>
-                <span className="text-xs text-gray-700 dark:text-gray-300">Email (professional tone)</span>
+                <span className="text-xs text-gray-900">•</span>
+                <span className="text-xs text-gray-700">Email (professional tone)</span>
               </div>
               <div className="flex items-start gap-1.5">
-                <span className="text-xs text-gray-900 dark:text-white">•</span>
-                <span className="text-xs text-gray-700 dark:text-gray-300">Formal memo (official documentation)</span>
+                <span className="text-xs text-gray-900">•</span>
+                <span className="text-xs text-gray-700">Formal memo (official documentation)</span>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="space-y-2.5 mt-4">
+          <div className="space-y-2.5 mt-8">
             <button
               onClick={handleExport}
               className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors shadow-lg text-xs"

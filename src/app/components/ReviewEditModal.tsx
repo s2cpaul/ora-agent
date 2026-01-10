@@ -112,8 +112,8 @@ export function ReviewEditModal({ isOpen, onClose, observationData, subscriberEm
       <div className="relative w-full max-w-[393px] h-[852px] bg-white rounded-[3rem] shadow-2xl border-8 border-gray-800 overflow-hidden">
         <div className="relative w-full h-full bg-white flex flex-col overflow-y-auto">
           {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">Review & Edit</h2>
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-5 pt-[24px] pb-2 flex items-end justify-between z-10">
+            <h2 className="text-base font-semibold text-gray-900">Review & Edit</h2>
             <button
               onClick={onClose}
               className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
@@ -123,16 +123,18 @@ export function ReviewEditModal({ isOpen, onClose, observationData, subscriberEm
           </div>
 
           {/* Content */}
-          <div className="flex-1 px-6 py-4 space-y-6">
+          <div className="flex-1 px-5 pt-[4px] pb-3 space-y-2.5">
             {/* Observation Section */}
             <div>
-              <h3 className="text-base font-bold text-gray-900 mb-2">Observation:</h3>
-              <p className="text-sm text-gray-600 mb-3">{new Date().toLocaleDateString('en-US')}</p>
-              <div className="bg-gray-100 rounded-lg p-4 mb-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-gray-900">Observation:</h3>
+                <p className="text-xs text-gray-500">{new Date().toLocaleDateString('en-US')}</p>
+              </div>
+              <div className="bg-gray-100 rounded-lg p-3 mb-2">
                 <textarea
                   value={observation}
                   onChange={(e) => setObservation(e.target.value)}
-                  className="w-full bg-transparent text-sm text-gray-800 resize-none border-none focus:outline-none min-h-[100px]"
+                  className="w-full bg-transparent text-sm text-gray-800 resize-none border-none focus:outline-none min-h-[80px]"
                 />
               </div>
               
@@ -154,7 +156,7 @@ export function ReviewEditModal({ isOpen, onClose, observationData, subscriberEm
 
             {/* Recommendation Section */}
             <div>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-gray-900">Recommendation:</h3>
                 <span className="px-2 py-0.5 bg-yellow-200 text-yellow-900 rounded text-xs font-semibold">
                   Improve
@@ -165,107 +167,108 @@ export function ReviewEditModal({ isOpen, onClose, observationData, subscriberEm
                 <textarea
                   value={recommendation}
                   onChange={(e) => setRecommendation(e.target.value)}
-                  className="w-full px-4 py-3 pr-16 text-sm text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[280px]"
+                  className="w-full px-3 py-2 pr-[39px] text-sm text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[140px]"
                 />
                 
                 {/* Floating Mic Button */}
                 <button
                   onClick={toggleRecording}
-                  className={`absolute bottom-4 right-4 p-4 rounded-full shadow-lg transition-colors ${
+                  className={`absolute bottom-3 right-[9px] p-2 rounded-full shadow-lg transition-colors ${
                     isRecording ? "bg-red-500 text-white" : "bg-black text-white hover:bg-gray-800"
                   }`}
                   title={isRecording ? "Stop recording" : "Start voice recording"}
                 >
-                  <Mic className="size-5" />
+                  <Mic className="size-2.5" />
                 </button>
               </div>
             </div>
 
             {/* Optional Context Data */}
-            <div>
-              <h3 className="text-base font-bold text-gray-900 mb-4">Optional Context Data</h3>
+            <div className="-mt-1">
+              <h3 className="text-base font-bold text-gray-900 pb-[2px]">Optional Context Data</h3>
               
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {/* EVENT */}
                 <div>
-                  <label className="flex items-center gap-2 text-xs font-bold text-gray-900 mb-2">
+                  <label className="flex items-center gap-2 text-xs font-bold text-gray-900 mb-1">
                     <Calendar className="size-4" />
                     EVENT: [Acronym, Title or Descriptor]
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    list="event-options"
                     value={eventName}
                     onChange={(e) => setEventName(e.target.value)}
-                    className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white appearance-none"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'right 1rem center',
-                    }}
-                  >
-                    <option value=""></option>
-                    <option value="CPX">CPX</option>
-                    <option value="MEU">MEU</option>
-                    <option value="ITX">ITX</option>
-                    <option value="RIMPAC">RIMPAC</option>
-                    <option value="BALTOPS">BALTOPS</option>
-                    <option value="Red Flag">Red Flag</option>
-                    <option value="Training Exercise">Training Exercise</option>
-                  </select>
+                    placeholder="Select or type your own"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white placeholder:text-gray-400"
+                  />
+                  <datalist id="event-options">
+                    <option value="CPX" />
+                    <option value="MEU" />
+                    <option value="ITX" />
+                    <option value="RIMPAC" />
+                    <option value="BALTOPS" />
+                    <option value="Red Flag" />
+                    <option value="Job Fair" />
+                    <option value="Annual Training" />
+                    <option value="Training Exercise" />
+                  </datalist>
                 </div>
 
                 {/* POINT OF CONTACT */}
                 <div>
-                  <label className="flex items-center gap-2 text-xs font-bold text-gray-900 mb-2">
+                  <label className="flex items-center gap-2 text-xs font-bold text-gray-900 mb-1">
                     <User className="size-4" />
-                    POINT OF CONTACT: [Phone representative, event organizer, or witness]
+                    POINT OF CONTACT: [Witness or organizer]
                   </label>
                   <input
                     type="text"
                     value={pointOfContact}
                     onChange={(e) => setPointOfContact(e.target.value)}
-                    placeholder="Enter point of contact (Optional)"
-                    className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white placeholder:text-gray-400"
+                    placeholder="POC or Phone representative (optional)"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white placeholder:text-gray-400"
                   />
                 </div>
 
                 {/* FROM */}
                 <div>
-                  <label className="flex items-center gap-2 text-xs font-bold text-gray-900 mb-2">
+                  <label className="flex items-center gap-2 text-xs font-bold text-gray-900 mb-1">
                     <Building2 className="size-4" />
                     FROM: [Unit/Organization, Team]
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    list="from-options"
                     value={from}
                     onChange={(e) => setFrom(e.target.value)}
-                    className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white appearance-none"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'right 1rem center',
-                    }}
-                  >
-                    <option value=""></option>
-                    <option value="G3">G3</option>
-                    <option value="G2">G2</option>
-                    <option value="G4">G4</option>
-                    <option value="G6">G6</option>
-                    <option value="S3">S3</option>
-                    <option value="S2">S2</option>
-                    <option value="Battalion Staff">Battalion Staff</option>
-                    <option value="Company Command">Company Command</option>
-                  </select>
+                    placeholder="Select or type your own"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white placeholder:text-gray-400"
+                  />
+                  <datalist id="from-options">
+                    <option value="G3" />
+                    <option value="G2" />
+                    <option value="G4" />
+                    <option value="G6" />
+                    <option value="S3" />
+                    <option value="S2" />
+                    <option value="Staff" />
+                    <option value="Company Command" />
+                    <option value="Debate Team" />
+                    <option value="Basketball" />
+                    <option value="Cheerleading" />
+                  </datalist>
                 </div>
 
                 {/* IMPACT */}
                 <div>
-                  <label className="flex items-center gap-2 text-xs font-bold text-gray-900 mb-2">
+                  <label className="flex items-center gap-2 text-xs font-bold text-gray-900 mb-1">
                     <AlertCircle className="size-4" />
                     IMPACT: [Estimate affect on our people first]
                   </label>
                   <select
                     value={impact}
                     onChange={(e) => setImpact(e.target.value)}
-                    className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-400 appearance-none"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-400 appearance-none"
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
                       backgroundRepeat: 'no-repeat',
@@ -282,16 +285,16 @@ export function ReviewEditModal({ isOpen, onClose, observationData, subscriberEm
 
                 {/* EID */}
                 <div>
-                  <label className="flex items-center gap-2 text-xs font-bold text-gray-900 mb-2">
+                  <label className="flex items-center gap-2 text-xs font-bold text-gray-900 mb-1">
                     <Hash className="size-4" />
-                    EID: [Electronic Identification Number, School, Organization, Operation]
+                    EID: [Electronic Identification Number, Unit]
                   </label>
                   <input
                     type="text"
                     value={eid}
                     onChange={(e) => setEid(e.target.value)}
                     placeholder=""
-                    className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                   />
                 </div>
               </div>
@@ -299,7 +302,7 @@ export function ReviewEditModal({ isOpen, onClose, observationData, subscriberEm
 
             {/* Subscriber Email Display */}
             {subscriberEmail && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
                 <div className="flex items-start gap-2">
                   <span className="text-blue-600 text-lg">📧</span>
                   <div>
@@ -313,7 +316,7 @@ export function ReviewEditModal({ isOpen, onClose, observationData, subscriberEm
             {/* Save Button */}
             <button
               onClick={handleSave}
-              className="w-full py-3.5 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 transition-colors"
+              className="w-full py-3 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 transition-colors"
             >
               {subscriberEmail ? 'Save & Send Report' : 'Save Report'}
             </button>

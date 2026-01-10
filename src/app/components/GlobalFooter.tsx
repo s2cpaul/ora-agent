@@ -5,11 +5,11 @@
  * Repository: https://github.com/s2cpaul/ora-agent
  */
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigation } from '../../contexts/NavigationContext';
 
 export function GlobalFooter() {
-  const navigate = useNavigate();
   const currentYear = new Date().getFullYear();
+  const { navigate } = useNavigation();
 
   const communityLinks = [
     { label: 'Forums', href: '#forums' },
@@ -35,7 +35,8 @@ export function GlobalFooter() {
   const legalLinks = [
     { label: 'Privacy Policy', href: '#privacy' },
     { label: 'Terms of Service', href: '#terms' },
-    { label: 'User Agreement', href: '#user-agreement' },
+    { label: 'User Agreement', href: '/agreement' },
+    { label: 'QR Codes', href: '/qrcodehub' },
     { label: 'Code of Conduct', href: '#code-of-conduct' },
   ];
 
@@ -49,6 +50,7 @@ export function GlobalFooter() {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
+      // Use custom navigation via event
       navigate(href);
     }
   };
@@ -71,7 +73,7 @@ export function GlobalFooter() {
               ORA
             </a>
             <p className="text-sm text-muted-foreground leading-relaxed mb-4 mt-4">
-              Supporting the modern workforce with fast, free, mobile micro-learning that makes them AI-enabled. AI literacy is now essential for career success. We drive innovation, efficiency, and measurable organizational change while fostering community, unexpected collaboration, positive energy, and partnerships that accelerate transformation. Currently available in English and Spanish.
+              Collaboration and teamwork is vital for driving digital transformation in today's workforce. Our fast, free, mobile micro-learning platform is AI-enabled, making AI literacy accessible for success. Tap the agent icon to start learning now! Together, we can foster innovation, boost efficiency, and achieve measurable organizational change while cultivating community, unexpected collaboration, positive energy, and partnerships that accelerate transformation. Options available in both English and Spanish.
             </p>
             <a
               href="/agreement"

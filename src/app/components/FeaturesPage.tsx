@@ -47,7 +47,7 @@ export function FeaturesPage({ isOpen, onClose, onTryAgent, onUpgradeClick }: Fe
     },
     {
       avatar: '🔧',
-      name: 'Tech Architect',
+      name: 'AI Engineer',
       specialty: 'Technology & Engineering',
       description: 'Technical expertise on architecture design, technology selection, scalability, and security.',
       capabilities: ['Architecture Design', 'Tech Stack Selection', 'Scalability Planning', 'Security Review'],
@@ -332,7 +332,7 @@ export function FeaturesPage({ isOpen, onClose, onTryAgent, onUpgradeClick }: Fe
               {/* User Question */}
               <div className="flex justify-end mb-4">
                 <div className="bg-purple-600 text-white rounded-2xl px-4 py-2 max-w-[80%]">
-                  <p className="text-sm">What compliance requirements should I consider for AI?</p>
+                  <p className="text-sm text-gray-300 dark:text-gray-300">What compliance requirements should I consider for AI?</p>
                 </div>
               </div>
 

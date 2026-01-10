@@ -2,9 +2,8 @@
 const CACHE_NAME = 'ora-v1';
 const urlsToCache = [
   '/',
-  '/index.html',
-  '/src/main.tsx',
-  '/src/styles/index.css'
+  '/index.html'
+  // Add more static assets from dist/assets/ if needed
 ];
 
 // Install event - cache assets

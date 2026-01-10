@@ -17,7 +17,6 @@ import { useState, useEffect, useRef } from "react";
 import { Bot, Moon, Sun, Zap, Monitor, Shield, CheckCircle2, Smartphone, Sparkles, QrCode } from "lucide-react";
 import { AIAgentModal } from "./components/AIAgentModal";
 import { AIAgentSidePanel } from "./components/AIAgentSidePanel";
-import { DataConsentModal } from "./components/DataConsentModal";
 import { AITrendsFeatureCard } from "./components/AITrendsFeatureCard";
 import { FeaturesPage } from "./components/FeaturesPage";
 import { QRCodeSection } from "./components/QRCodeSection";
@@ -39,12 +38,11 @@ type PageRoute = '/' | '/chat' | '/features' | '/downloads' | '/docs' | '/pricin
 
 // Home Page Component
 function HomePage() {
-  const [showConsentModal, setShowConsentModal] = useState(false);
   const [showFeatureCard, setShowFeatureCard] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("dark"); // Default to dark mode
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
   const [isPersonalAgentOpen, setIsPersonalAgentOpen] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const { navigate } = useNavigation();
   
   // Double-tap to toggle theme tracking
@@ -86,44 +84,6 @@ function HomePage() {
     };
   }, [theme]); // Include theme in dependencies
 
-  // Capture the beforeinstallprompt event
-  useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      console.log('PWA install prompt captured');
-    };
-
-    window.addEventListener('beforeinstallprompt', handler);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-    };
-  }, []);
-
-  // Check if consent modal should be shown for first-time users
-  useEffect(() => {
-    const consentShown = localStorage.getItem("consentShown");
-    if (!consentShown) {
-      setTimeout(() => {
-        setShowConsentModal(true);
-      }, 2000);
-    }
-  }, []);
-
-  // Authenticate carapaulson1@gmail.com as subscriber during design stage
-  useEffect(() => {
-    const authenticatedEmail = "carapaulson1@gmail.com";
-    const currentUserEmail = localStorage.getItem("userEmail");
-    
-    if (currentUserEmail === authenticatedEmail || !currentUserEmail) {
-      localStorage.setItem("userEmail", authenticatedEmail);
-      localStorage.setItem("userStatus", "logged_in");
-      localStorage.setItem("userTier", "premium");
-      localStorage.setItem("userName", "Cara Paulson");
-    }
-  }, []);
-
   // Initialize dark mode on component mount
   useEffect(() => {
     document.documentElement.classList.add("dark");
@@ -140,14 +100,12 @@ function HomePage() {
   };
 
   const handleConsentAccept = () => {
-    localStorage.setItem("consentShown", "true");
     localStorage.setItem("userAgreementAccepted", "true");
     localStorage.setItem("userQuestionCount", "0"); // Reset question count
-    setShowConsentModal(false);
+    setAgreedToTerms(true);
   };
 
   const handleConsentDecline = () => {
-    setShowConsentModal(false);
     // Don't set userAgreementAccepted to true
   };
 
@@ -190,68 +148,103 @@ function HomePage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6">
-        <div className="text-center px-4 pt-5 -mt-4">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        <div className="text-center px-4">
           {/* ORA Brand */}
-          <div className="mb-8">
-            <a 
-              href="https://agent.myora.now/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
-            >
-              <h1 className="text-6xl sm:text-7xl font-black tracking-[0.3em] mb-4">
-                ORA
-              </h1>
-            </a>
-            <p className="text-lg text-muted-foreground tracking-wider mb-0">
+          <div className="mb-6">
+            <h1 className="text-7xl sm:text-8xl font-black tracking-[0.2em] mb-3 text-foreground">
+              ORA
+            </h1>
+            <p className="text-base text-muted-foreground tracking-[0.3em]">
               Observe &nbsp;&nbsp; Respond &nbsp;&nbsp; Act
             </p>
           </div>
 
           {/* Main Headline */}
-          <h2 className="text-3xl sm:text-4xl font-bold mb-6 max-w-3xl mx-auto leading-tight text-purple-600 dark:text-purple-400 -mt-2">
+          <h2 className="text-3xl sm:text-5xl font-bold mb-4 max-w-4xl mx-auto leading-tight bg-gradient-to-r from-purple-500 to-purple-600 bg-clip-text text-transparent">
             Your Personal AI Leadership Agent
           </h2>
 
           {/* Tagline */}
-          <p className="text-sm sm:text-lg text-gray-700 dark:text-white mb-8 max-w-3xl mx-auto leading-relaxed font-medium -mt-[18px]">
+          <p className="text-base sm:text-lg text-foreground mb-8 max-w-4xl mx-auto leading-relaxed">
             The key to unlocking AI Transformation is in mobile micro-learning: from hand held capabilities to cultural confidence!
           </p>
 
-          {/* Quick Launch Button */}
+          {/* Try Mobile AI Agent Button */}
           <button 
             onClick={() => setIsPersonalAgentOpen(true)}
-            className="bg-green-600 hover:bg-green-700 text-white px-7 py-3.5 text-base rounded-lg inline-flex items-center gap-2.5 transition-colors mb-8"
+            className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg font-semibold rounded-xl inline-flex items-center gap-3 transition-all shadow-lg hover:shadow-green-600/50 mb-12"
           >
-            <Bot className="size-5" /> Try Mobile AI Agent
+            <Bot className="size-6" /> Try Mobile AI Agent
           </button>
 
-          {/* Features Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left relative z-10">
-            {/* Speed & Precision */}
-            <div className="bg-black dark:bg-black backdrop-blur-sm border border-gray-400 dark:border-purple-400/30 rounded-lg p-4 shadow-md shadow-purple-500/20 dark:shadow-purple-500/40 hover:shadow-purple-500/40 dark:hover:shadow-purple-500/60 hover:shadow-lg transition-shadow">
-              <div className="flex items-start gap-3">
-                <Zap className="size-5 text-white fill-yellow-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h3 className="font-bold text-sm text-white mb-1">Speed & Precision</h3>
-                  <p className="text-xs text-white leading-relaxed">
-                    Enables faster decisions and reduces operational friction through seamless integration.
-                  </p>
+          {/* Features Container with Purple Border */}
+          <div className="max-w-5xl mx-auto bg-gradient-to-br from-purple-600/20 via-blue-600/20 to-purple-600/20 p-[3px] rounded-2xl mb-8">
+            <div className="bg-card rounded-2xl p-8">
+              {/* Get Free Trial Button */}
+              <button 
+                onClick={() => setShowFeatureCard(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-10 py-4 text-lg font-bold rounded-xl transition-all shadow-lg hover:shadow-purple-600/50 mb-4 w-full sm:w-auto"
+              >
+                Get Free Trial Version ORA Mobile Download Now!
+              </button>
+              
+              <p className="text-sm text-muted-foreground mb-8">
+                From your mobile device tap add to home screen for seamless startup.
+              </p>
+
+              {/* Features Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left mb-8">
+                {/* Speed & Precision */}
+                <div className="bg-black rounded-xl p-6 border border-gray-800">
+                  <div className="flex items-start gap-3">
+                    <Zap className="size-6 text-yellow-400 fill-yellow-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h3 className="font-bold text-lg text-white mb-2">Speed & Precision</h3>
+                      <p className="text-sm text-gray-300 leading-relaxed">
+                        Enables faster decisions and reduces operational friction through seamless integration.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Interoperability */}
+                <div className="bg-black rounded-xl p-6 border border-gray-800">
+                  <div className="flex items-start gap-3">
+                    <Shield className="size-6 text-yellow-400 fill-yellow-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h3 className="font-bold text-lg text-white mb-2">Interoperability</h3>
+                      <p className="text-sm text-gray-300 leading-relaxed">
+                        Synchronizes data, workflows, and platforms across multiple operational domains.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Interoperability */}
-            <div className="bg-black dark:bg-black backdrop-blur-sm border border-gray-400 dark:border-purple-400/30 rounded-lg p-4 shadow-md shadow-purple-500/20 dark:shadow-purple-500/40 hover:shadow-purple-500/40 dark:hover:shadow-purple-500/60 hover:shadow-lg transition-shadow">
-              <div className="flex items-start gap-3">
-                <Shield className="size-5 text-white fill-yellow-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h3 className="font-bold text-sm text-white mb-1">Interoperability</h3>
-                  <p className="text-xs text-white leading-relaxed">
-                    Synchronizes data, workflows, and platforms across multiple operational domains.
-                  </p>
-                </div>
+              {/* User Agreement Form */}
+              <div className="border-t border-border pt-6">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input 
+                    type="checkbox"
+                    checked={agreedToTerms}
+                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                    className="mt-1 w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                    I agree to the{' '}
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate('/agreement');
+                      }}
+                      className="text-blue-600 dark:text-blue-400 underline hover:text-blue-700 dark:hover:text-blue-300"
+                    >
+                      Terms of Service
+                    </button>
+                    {' '}and understand that ORA is designed for learning and professional development, not for collecting personally identifiable information (PII) or securing sensitive data.
+                  </span>
+                </label>
               </div>
             </div>
           </div>
@@ -287,14 +280,6 @@ function HomePage() {
         isOpen={isPersonalAgentOpen}
         onClose={() => setIsPersonalAgentOpen(false)}
       />
-
-      {/* Data Consent Modal */}
-      <DataConsentModal
-        isOpen={showConsentModal}
-        onAccept={handleConsentAccept}
-        onDecline={handleConsentDecline}
-        deferredPrompt={deferredPrompt}
-      />
     </div>
   );
 }
@@ -302,39 +287,7 @@ function HomePage() {
 // Chat Page Component
 function ChatPage() {
   const [isPersonalAgentOpen, setIsPersonalAgentOpen] = useState(true);
-  const [showConsentModal, setShowConsentModal] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const { navigate } = useNavigation();
-
-  // Capture the beforeinstallprompt event
-  useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      console.log('PWA install prompt captured');
-    };
-
-    window.addEventListener('beforeinstallprompt', handler);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-    };
-  }, []);
-
-  const handleConsentAccept = () => {
-    localStorage.setItem("consentShown", "true");
-    localStorage.setItem("userAgreementAccepted", "true");
-    localStorage.setItem("userQuestionCount", "0"); // Reset question count
-    setShowConsentModal(false);
-  };
-
-  const handleConsentDecline = () => {
-    setShowConsentModal(false);
-  };
-
-  const handleShowConsentModal = () => {
-    setShowConsentModal(true);
-  };
 
   const handleClose = () => {
     setIsPersonalAgentOpen(false);
@@ -346,15 +299,6 @@ function ChatPage() {
       <AIAgentSidePanel 
         isOpen={isPersonalAgentOpen}
         onClose={handleClose}
-        onShowConsentModal={handleShowConsentModal}
-      />
-      
-      {/* Data Consent Modal */}
-      <DataConsentModal
-        isOpen={showConsentModal}
-        onAccept={handleConsentAccept}
-        onDecline={handleConsentDecline}
-        deferredPrompt={deferredPrompt}
       />
     </div>
   );

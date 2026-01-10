@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X, Copy, Download, Mic, Eye } from "lucide-react";
-import { FinalReportScreen } from "./FinalReportScreen";
+import { RecentActivity } from "./RecentActivity";
 
 interface EditableReportScreenProps {
   isOpen: boolean;
@@ -47,7 +47,7 @@ export function EditableReportScreen({
   const [discussionText, setDiscussionText] = useState(observation);
   const [recommendationText, setRecommendationText] = useState(recommendation);
   const [isRecording, setIsRecording] = useState(false);
-  const [showFinalReport, setShowFinalReport] = useState(false);
+  const [showRecentActivity, setShowRecentActivity] = useState(false);
 
   if (!isOpen) return null;
 
@@ -105,20 +105,25 @@ a. Topic: ${topic}
 (2) Recommendation. ${recommendationText}
     `.trim();
 
-    const blob = new Blob([reportContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `After_Action_Report_${reportDate.replace(/\s/g, '_')}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      const blob = new Blob([reportContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `After_Action_Report_${reportDate.replace(/\s/g, '_')}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Download is not supported in this environment. Please copy the report text manually.');
+    }
   };
 
   const handlePreview = () => {
     // Open the final report preview
-    setShowFinalReport(true);
+    setShowRecentActivity(true);
   };
 
   const toggleRecording = () => {
@@ -127,7 +132,7 @@ a. Topic: ${topic}
   };
 
   return (
-    <div className="absolute inset-0 bg-white dark:bg-gray-900 z-[75] overflow-hidden flex flex-col">
+    <div className="absolute inset-0 bg-white z-[75] overflow-hidden flex flex-col">
       {/* Header Bar */}
       <div className="bg-black text-white px-3 py-2 flex items-center justify-center shrink-0 z-10 relative">
         <div className="flex items-center gap-2">
@@ -145,6 +150,16 @@ a. Topic: ${topic}
             <Download className="size-3" />
             Save
           </button>
+          <button
+            onClick={() => setShowRecentActivity(true)}
+            className="bg-purple-600 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1 hover:bg-purple-700 transition-colors"
+            title="Recent Activity - Select observations to generate comprehensive 'After Action Reports' or memos. Newest items are displayed first."
+          >
+            <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Recent
+          </button>
         </div>
         <button
           onClick={onClose}
@@ -157,101 +172,101 @@ a. Topic: ${topic}
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-3 pt-2 pb-2">
         {/* Report Header Section */}
-        <div className="mb-4">
-          <h2 className="text-sm font-semibold mb-3 text-gray-900 dark:text-white flex items-center gap-1.5">
-            <span className="text-gray-500">✎</span> Report Header
+        <div className="mb-3">
+          <h2 className="text-xs font-semibold mb-2 text-gray-900">
+            REPORT HEADER
           </h2>
 
-          <div className="space-y-2.5">
+          <div className="space-y-1">
             {/* Date */}
-            <div>
-              <label className="block text-[11px] font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-medium text-gray-700 w-[76px] shrink-0">
                 Date
               </label>
               <input
                 type="text"
                 value={reportDate}
                 onChange={(e) => setReportDate(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-[10px] font-mono leading-snug focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-[10px] font-mono leading-snug focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
             {/* Reference Number */}
-            <div>
-              <label className="block text-[11px] font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Reference Number (Optional)
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-medium text-gray-700 w-[76px] shrink-0">
+                Reference Number
               </label>
               <input
                 type="text"
                 value={referenceNumber}
                 onChange={(e) => setReferenceNumber(e.target.value)}
-                placeholder="Reference Number"
-                className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-[10px] font-mono leading-snug placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Reference Number Optional"
+                className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-[10px] font-mono leading-snug placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
             {/* From */}
-            <div>
-              <label className="block text-[11px] font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-medium text-gray-700 w-[76px] shrink-0">
                 From
               </label>
               <input
                 type="text"
                 value={fromField}
                 onChange={(e) => setFromField(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-[10px] font-mono leading-snug focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-[10px] font-mono leading-snug focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
             {/* To */}
-            <div>
-              <label className="block text-[11px] font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-medium text-gray-700 w-[76px] shrink-0">
                 To
               </label>
               <input
                 type="text"
                 value={toField}
                 onChange={(e) => setToField(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-[10px] font-mono leading-snug focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-[10px] font-mono leading-snug focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
             {/* Via */}
-            <div>
-              <label className="block text-[11px] font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-medium text-gray-700 w-[76px] shrink-0">
                 Via (Optional)
               </label>
               <input
                 type="text"
                 value={viaField}
                 onChange={(e) => setViaField(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-[10px] font-mono leading-snug focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-[10px] font-mono leading-snug focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
             {/* Subject */}
-            <div>
-              <label className="block text-[11px] font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-medium text-gray-700 w-[76px] shrink-0">
                 Subject
               </label>
               <input
                 type="text"
                 value={subjectField}
                 onChange={(e) => setSubjectField(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-[10px] font-mono leading-snug focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-[10px] font-mono leading-snug focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
             {/* Reference */}
-            <div>
-              <label className="block text-[11px] font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="flex items-start gap-2">
+              <label className="text-[11px] font-medium text-gray-700 w-[76px] shrink-0 pt-1.5">
                 Reference (Optional)
               </label>
               <textarea
                 value={referenceText}
                 onChange={(e) => setReferenceText(e.target.value)}
                 rows={3}
-                className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-[10px] font-mono leading-snug focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-[10px] font-mono leading-snug focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
               />
             </div>
           </div>
@@ -259,56 +274,56 @@ a. Topic: ${topic}
 
         {/* Report Body Section */}
         <div className="mb-4">
-          <h2 className="text-sm font-semibold mb-3 text-gray-900 dark:text-white flex items-center gap-1.5">
-            <span className="text-gray-500">✎</span> Report Body
+          <h2 className="text-xs font-semibold mb-2 text-gray-900">
+            REPORT BODY
           </h2>
 
           <div className="space-y-3">
             {/* 1. Background */}
             <div>
-              <h3 className="font-semibold text-xs text-gray-900 dark:text-white mb-1.5">1. Background.</h3>
+              <h3 className="font-semibold text-xs text-gray-900 mb-1.5">1. Background.</h3>
               <textarea
                 value={backgroundText}
                 onChange={(e) => setBackgroundText(e.target.value)}
-                rows={5}
-                className="w-full px-2.5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                rows={6}
+                className="w-full px-2.5 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 text-[10px] font-mono leading-snug focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
               />
             </div>
 
             {/* 2. Areas for Improvement */}
             <div>
-              <h3 className="font-semibold text-xs text-gray-900 dark:text-white mb-2">2. Areas for Improvement.</h3>
+              <h3 className="font-semibold text-xs text-gray-900 mb-2">2. Areas for Improvement.</h3>
               
               <div className="ml-3 space-y-2.5">
                 <div>
-                  <p className="font-semibold text-xs text-gray-900 dark:text-white mb-1.5">a. Topic: {topic}</p>
+                  <p className="font-semibold text-xs text-gray-900 mb-1.5">a. Topic: {topic}</p>
                   
                   <div className="ml-3 space-y-2.5">
                     {/* Discussion */}
                     <div>
-                      <h4 className="font-semibold text-xs text-gray-900 dark:text-white mb-1">(1) Discussion.</h4>
+                      <h4 className="font-semibold text-xs text-gray-900 mb-1">(1) Discussion.</h4>
                       <textarea
                         value={discussionText}
                         onChange={(e) => setDiscussionText(e.target.value)}
                         rows={5}
-                        className="w-full px-2.5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono leading-snug resize-none"
+                        className="w-full px-2.5 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono leading-snug resize-none"
                       />
                     </div>
 
                     {/* Recommendation */}
                     <div>
-                      <h4 className="font-semibold text-xs text-gray-900 dark:text-white mb-1">(2) Recommendation.</h4>
+                      <h4 className="font-semibold text-xs text-gray-900 mb-1">(2) Recommendation.</h4>
                       <textarea
                         value={recommendationText}
                         onChange={(e) => setRecommendationText(e.target.value)}
                         rows={6}
-                        className="w-full px-2.5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono leading-snug resize-none"
+                        className="w-full px-2.5 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono leading-snug resize-none"
                       />
                       
                       {/* Preview Report Button - Below Recommendation */}
                       <button
                         onClick={handlePreview}
-                        className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-lg text-xs"
+                        className="w-full mt-0 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-lg text-xs"
                       >
                         <Eye className="size-4" />
                         Preview Report
@@ -334,21 +349,11 @@ a. Topic: ${topic}
         <Mic className="size-4 text-white" />
       </button>
 
-      {/* Final Report Preview */}
-      {showFinalReport && (
-        <FinalReportScreen
-          isOpen={showFinalReport}
-          onClose={() => setShowFinalReport(false)}
-          reportDate={reportDate}
-          referenceNumber={referenceNumber}
-          fromField={fromField}
-          toField={toField}
-          viaField={viaField}
-          subjectField={subjectField}
-          referenceText={referenceText}
-          backgroundText={backgroundText}
-          discussionText={discussionText}
-          recommendationText={recommendationText}
+      {/* Recent Activity */}
+      {showRecentActivity && (
+        <RecentActivity
+          isOpen={showRecentActivity}
+          onClose={() => setShowRecentActivity(false)}
         />
       )}
     </div>

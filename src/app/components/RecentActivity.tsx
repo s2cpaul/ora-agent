@@ -12,7 +12,12 @@ interface Activity {
   selected: boolean;
 }
 
-export function RecentActivity() {
+interface RecentActivityProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function RecentActivity({ isOpen = true, onClose }: RecentActivityProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showReportGenerator, setShowReportGenerator] = useState(false);
   const [showReportPreview, setShowReportPreview] = useState(false);
@@ -32,7 +37,17 @@ export function RecentActivity() {
   const [activities, setActivities] = useState<Activity[]>([
     {
       id: "1",
-      date: "Jan 31, 2026",
+      date: "Jan 09, 2026",
+      title: "Senior leaders withholding information during After Action Reviews (AARs)",
+      description: "Senior leaders have been withholding information during After Action Reviews (AARs) to avoid embarrassment, which is undermining transparency, trust, and the quality of organizational learning. This behavior is preventing teams from fully understanding root causes, repeating avoidable mistakes, and missing opportunities to improve mission readiness.",
+      status: "IMPROVE",
+      sentiment: "Concerned",
+      category: "Information Assurance",
+      selected: false,
+    },
+    {
+      id: "3",
+      date: "Jan 08, 2026",
       title: "Library Community success with Makers space",
       description: "Continue supporting the Makers space innovation initiative. Expand programming to include local high schools, private partnerships, more workshops and community-led sessions. Document success stories to share with other libraries and secure additional funding.",
       status: "SUSTAIN",
@@ -42,7 +57,17 @@ export function RecentActivity() {
     },
     {
       id: "2",
-      date: "Jan 30, 2026",
+      date: "Jan 07, 2026",
+      title: "Participants struggling to navigate the information system and find what they need",
+      description: "I saw several participants struggling to navigate the information system during the event. Most were unable to locate and share critical information in a timely manner and mistakes were made. This can compromise data quality, integrity and availability of information. Participants are visibly frustrated and losing confidence in the information system because they can't locate information, training resources, or tools they need to complete basic workflows.",
+      status: "IMPROVE",
+      sentiment: "Confused",
+      category: "Information & Intelligence",
+      selected: false,
+    },
+    {
+      id: "4",
+      date: "Jan 06, 2026",
       title: "Girlfriend is angry again - feeling stuck",
       description: 'Relationships are called "RE-lationships" for a reason. Humans tend to repeat many of the same patterns. Forgiveness doesn\'t ignore truth and it doesn\'t mean enabling harmful behavior. Most people are not mind readers, so we must learn to communicate and identify wrongdoings. Keeping a mistake or wrongdoing silent is wrong too. Forgiveness isn\'t a one-time act; it\'s a practice that requires humor and humility. And it takes a lifetime. Advice too. Advice in the book of Matthew includes 18:15-17: Confront wrongdoing with love and clarity. Advice from Luke 17:3-4: If someone repents, forgive — but accountability matters.',
       status: "IMPROVE",
@@ -51,8 +76,8 @@ export function RecentActivity() {
       selected: false,
     },
     {
-      id: "3",
-      date: "Jan 30, 2026",
+      id: "5",
+      date: "Jan 05, 2026",
       title: "Performance review process needs standardization and improved feedback quality",
       description: "Implement a standardized performance management framework with clear evaluation criteria, regular feedback cycles, and training for all supervisors. Include employee self-assessments, peer feedback options, and development planning. Establish measurable goals. Establish quarterly check-ins in addition to annual reviews to ensure continuous improvement and alignment with organizational objectives.",
       status: "IMPROVE",
@@ -61,8 +86,8 @@ export function RecentActivity() {
       selected: false,
     },
     {
-      id: "4",
-      date: "Jan 29, 2026",
+      id: "6",
+      date: "Jan 04, 2026",
       title: "Attendance at library Makers space events has grown by 300%",
       description: "Continue supporting the Makers space initiative. Expand programming to include private partnerships, more workshops and community-led sessions. Document success stories to share with other libraries and secure additional funding.",
       status: "SUSTAIN",
@@ -98,11 +123,27 @@ export function RecentActivity() {
   const selectedCount = activities.filter(a => a.selected).length;
   const allSelected = activities.length > 0 && activities.every(a => a.selected);
 
-  const filteredActivities = activities.filter(activity =>
-    activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    activity.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    activity.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter activities to show only those from the last 120 days
+  const filterByDate = (activity: Activity) => {
+    const activityDate = new Date(activity.date);
+    const today = new Date();
+    const daysDifference = Math.floor((today.getTime() - activityDate.getTime()) / (1000 * 60 * 60 * 24));
+    return daysDifference <= 120;
+  };
+
+  const filteredActivities = activities
+    .filter(filterByDate) // Only show activities from last 120 days
+    .filter(activity =>
+      activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      activity.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      activity.category.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      // Sort by date, newest first
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return dateB.getTime() - dateA.getTime();
+    });
 
   const getSentimentEmoji = (sentiment: string) => {
     switch (sentiment) {
@@ -119,24 +160,24 @@ export function RecentActivity() {
     const sustainItems = selectedActivities.filter(a => a.status === "SUSTAIN");
     const improveItems = selectedActivities.filter(a => a.status === "IMPROVE");
     
-    let body = `1. Background.\n\nThis report summarizes ${selectedCount} observation${selectedCount !== 1 ? 's' : ''} recorded over the last 120 days. The observations are categorized into areas for improvement and practices to sustain.\n\n`;
+    let body = `1. Background.\\n\\nThis report summarizes ${selectedCount} observation${selectedCount !== 1 ? 's' : ''} recorded over the last 120 days. The observations are categorized into areas for improvement and practices to sustain.\\n\\n`;
     
     if (improveItems.length > 0) {
-      body += `2. Areas for Improvement.\n\n`;
+      body += `2. Areas for Improvement.\\n\\n`;
       improveItems.forEach((item, index) => {
         const letter = String.fromCharCode(97 + index); // a, b, c, etc.
-        body += `   ${letter}. ${item.category}\n\n`;
-        body += `      (1) Discussion. ${item.title}. ${item.description}\n\n`;
-        body += `      (2) Recommendation. [Add specific recommendations here]\n\n`;
+        body += `   ${letter}. ${item.category}\\n\\n`;
+        body += `      (1) Discussion. ${item.title}. ${item.description}\\n\\n`;
+        body += `      (2) Recommendation. [Add specific recommendations here]\\n\\n`;
       });
     }
     
     if (sustainItems.length > 0) {
-      body += `${improveItems.length > 0 ? '3' : '2'}. Practices to Sustain.\n\n`;
+      body += `${improveItems.length > 0 ? '3' : '2'}. Practices to Sustain.\\n\\n`;
       sustainItems.forEach((item, index) => {
         const letter = String.fromCharCode(97 + index); // a, b, c, etc.
-        body += `   ${letter}. ${item.category}\n\n`;
-        body += `      (1) Discussion. ${item.title}. ${item.description}\n\n`;
+        body += `   ${letter}. ${item.category}\\n\\n`;
+        body += `      (1) Discussion. ${item.title}. ${item.description}\\n\\n`;
       });
     }
     
@@ -144,10 +185,21 @@ export function RecentActivity() {
     setShowReportGenerator(true);
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="min-h-screen bg-gray-50 -mx-4 sm:-mx-6 -my-8">
+    <div className="absolute inset-0 bg-gray-50 z-[80] overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="bg-[#1e3a8a] text-white px-6 py-8">
+      <div className="bg-[#1e3a8a] text-white px-6 py-8 relative">
+        {/* Close Button */}
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1.5 hover:bg-blue-800 rounded-full transition-colors"
+          aria-label="Close Recent Activity"
+        >
+          <X className="size-6" />
+        </button>
+        
         <h1 className="text-2xl font-bold mb-2">Recent Activity</h1>
         <p className="text-sm text-blue-100">
           Select observations to generate comprehensive "After Action Reports" or memos. Newest items are displayed first.
@@ -161,23 +213,51 @@ export function RecentActivity() {
             placeholder="Search observations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-lg text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 border-2 border-black focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
+        </div>
+        
+        {/* 120 Day Note */}
+        <p className="text-xs text-blue-100 mt-2">
+          Note: Recent 120-day activity is displayed in agent.
+        </p>
+      </div>
+
+      {/* Selection Controls */}
+      <div className="px-6 pt-4 pb-2 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={toggleSelectAll}
+            className="text-blue-600 font-medium text-sm hover:underline"
+          >
+            {allSelected ? "Deselect All" : "Select All"}
+          </button>
+          
+          <div className="text-xs text-gray-600 text-center leading-none">
+            <div>{selectedCount} observation{selectedCount !== 1 ? 's' : ''}</div>
+            <div>selected</div>
+          </div>
+          
+          <button 
+            onClick={clearSelection}
+            className={`text-sm text-blue-600 hover:underline ${selectedCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={selectedCount === 0}
+          >
+            Clear selection
+          </button>
+          
+          <button 
+            className={`px-2 py-0.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors ${selectedCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            onClick={handleGenerateReport}
+            disabled={selectedCount === 0}
+          >
+            Generate Report
+          </button>
         </div>
       </div>
 
-      {/* Select All Link */}
-      <div className="px-6 pt-4">
-        <button 
-          onClick={toggleSelectAll}
-          className="text-blue-600 font-medium text-sm hover:underline"
-        >
-          {allSelected ? "Deselect All" : "Select All"}
-        </button>
-      </div>
-
-      {/* Activity List */}
-      <div className="px-6 py-4 space-y-4 pb-32">
+      {/* Activity List - Scrollable */}
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 pb-32">
         {filteredActivities.map((activity) => (
           <div 
             key={activity.id}
@@ -206,9 +286,16 @@ export function RecentActivity() {
             </div>
 
             {/* Title */}
-            <h3 className="font-semibold text-gray-900 pr-8 mb-2">
+            <h3 className="font-semibold text-gray-900 pr-8 mb-2 text-[15px]">
               {activity.title}
             </h3>
+
+            {/* Category Pill */}
+            <div className="mb-3">
+              <span className="px-2.5 py-1 rounded-md bg-blue-100 text-blue-700 font-medium text-xs">
+                {activity.category}
+              </span>
+            </div>
 
             {/* Description */}
             <p className="text-sm text-gray-600 leading-relaxed mb-4">
@@ -243,11 +330,6 @@ export function RecentActivity() {
                 <span className="text-gray-700">{activity.sentiment}</span>
               </div>
 
-              {/* Category */}
-              <span className="px-2.5 py-1 rounded-md bg-blue-100 text-blue-700 font-medium">
-                {activity.category}
-              </span>
-
               {/* Audio Icon */}
               <button 
                 className="ml-auto p-1.5 hover:bg-gray-100 rounded transition-colors"
@@ -259,31 +341,6 @@ export function RecentActivity() {
           </div>
         ))}
       </div>
-
-      {/* Fixed Bottom Bar */}
-      {selectedCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4 shadow-lg">
-          <div className="max-w-4xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-700">
-                {selectedCount} observation{selectedCount !== 1 ? 's' : ''} selected
-              </span>
-              <button 
-                onClick={clearSelection}
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Clear selection
-              </button>
-            </div>
-            <button 
-              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              onClick={handleGenerateReport}
-            >
-              Generate Report
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Report Generator Screen */}
       {showReportGenerator && (

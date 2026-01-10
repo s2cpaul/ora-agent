@@ -1,11 +1,9 @@
-/**
- * ORA - AI Leadership Agent
- * Copyright (c) 2024-2026 s2cpaul
- * Licensed under MIT License
- * Repository: https://github.com/s2cpaul/ora-agent
- */
+import { useState } from "react";
 
 export function AgreementPage() {
+  const [email, setEmail] = useState("");
+  const [agreeToContribute, setAgreeToContribute] = useState(false);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
@@ -194,7 +192,7 @@ export function AgreementPage() {
               <ul className="list-none space-y-2">
                 <li><strong className="text-foreground">Email:</strong> carapaulson1@gmail.com</li>
                 <li><strong className="text-foreground">Schedule a Call:</strong> <a href="https://calendly.com/caraz007" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">calendly.com/caraz007</a></li>
-                <li><strong className="text-foreground">Website:</strong> <a href="https://agent.myora.now/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">agent.myora.now</a></li>
+                <li><strong className="text-foreground">Website:</strong> <a href="https://myora.now/chat" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">myora.now/chat</a></li>
               </ul>
             </div>
           </section>
@@ -210,6 +208,53 @@ export function AgreementPage() {
               <li>You will use ORA in accordance with the Acceptable Use Policy</li>
             </ul>
           </section>
+        </div>
+
+        {/* Email and Data Contribution Agreement */}
+        <div className="mt-8 p-6 bg-card border border-border rounded-lg">
+          <h2 className="text-xl font-semibold mb-4">Email Address</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            A copy of this User agreement will be sent to the email provided
+          </p>
+
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your.email@example.com"
+            className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary mb-6"
+          />
+
+          <div className="border-t border-border pt-6">
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={agreeToContribute}
+                onChange={(e) => setAgreeToContribute(e.target.checked)}
+                className="mt-1 w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+              />
+              <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                I understand and agree to contribute my anonymized questions to promote responsible, safe AI and improve ORA!
+              </span>
+            </label>
+
+            <p className="text-xs text-muted-foreground mt-4 ml-8">
+              You can change this anytime in Settings. By agreeing, you accept our{' '}
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="text-blue-600 dark:text-blue-400 underline hover:text-blue-700 dark:hover:text-blue-300"
+              >
+                Privacy Policy
+              </button>
+              {' '}and{' '}
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="text-blue-600 dark:text-blue-400 underline hover:text-blue-700 dark:hover:text-blue-300"
+              >
+                Terms of Service
+              </button>.
+            </p>
+          </div>
         </div>
 
         {/* Action Buttons */}

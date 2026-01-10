@@ -6,23 +6,8 @@
  */
 
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  Bot, 
-  Moon, 
-  Sun, 
-  Menu, 
-  X, 
-  Home, 
-  Download,
-  Sparkles,
-  Settings,
-  BookOpen,
-  MessageSquare,
-  DollarSign,
-  Shield,
-  FileText
-} from 'lucide-react';
+import { Menu, X, Bot, Sun, Moon, Sparkles, Shield, Download, BookOpen, DollarSign, Settings, MessageSquare } from 'lucide-react';
+import { useNavigation } from '../../contexts/NavigationContext';
 
 interface GlobalNavigationProps {
   theme?: 'light' | 'dark';
@@ -36,13 +21,12 @@ export function GlobalNavigation({
   onOpenAgent 
 }: GlobalNavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const { currentPage, navigate } = useNavigation();
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => currentPage === path;
 
   const navLinks = [
-    { path: '/', label: 'Home', icon: Home },
+    { path: '/', label: 'Home', icon: Bot },
     { path: '/features', label: 'Features', icon: Sparkles },
     { path: '/mission', label: 'Mission', icon: Shield },
     { path: '/downloads', label: 'Downloads', icon: Download },

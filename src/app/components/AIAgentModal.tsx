@@ -3,11 +3,22 @@
  * Copyright (c) 2024-2026 s2cpaul
  * Licensed under MIT License
  * Repository: https://github.com/s2cpaul/ora-agent
+ * 
+ * ============================================================================
+ * DESIGN RULES - AI AGENT MODAL
+ * ============================================================================
+ * 1. Agent modal ALWAYS displays in LIGHT MODE (regardless of app theme)
+ * 2. Thought bubble text is DARK GRAY (#374151 / text-gray-700), never white
+ * 3. Feedback thumbs buttons are GRAY (text-gray-500) when not selected
+ * 4. Web links display with UNDERLINE and DARK BLUE color (#1e40af)
+ * ============================================================================
  */
 
 import { X, Mic, Heart, Send, AlertTriangle, ChevronDown, ThumbsUp, ThumbsDown, ArrowLeft } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { sections } from "../data/content";
+import { ReportIssueModal } from "./ReportIssueModal";
+import { ActionableSummary } from "./ActionableSummary";
 
 interface AIAgentModalProps {
   isOpen: boolean;
@@ -31,58 +42,76 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
   const VIDEO_ROTATION = [
     "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/DataIntro.mp4",
     "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/EmoLiteracy1.mp4",
-    "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/Failures1.mp4"
+    "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/Failures1.mp4",
+    "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/NC4ME2.mp4"
   ];
 
+  // Core UI states
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [showCheckIn, setShowCheckIn] = useState(false);
-  const [selectedEmoji, setSelectedEmoji] = useState<string>("");
-  const [currentVideo, setCurrentVideo] = useState("https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/DataIntro.mp4");
+  const [currentVideo, setCurrentVideo] = useState(DEFAULT_VIDEO);
   const [videoContainerHeight, setVideoContainerHeight] = useState<number>(300);
+  const [isVideoExpanded, setIsVideoExpanded] = useState(false);
+  
+  // Modal & screen states
   const [showCautionForm, setShowCautionForm] = useState(false);
-  const [observationTopic, setObservationTopic] = useState("AI Bias or Risk");
-  const [observationText, setObservationText] = useState(DEFAULT_OBSERVATION);
-  const [observationOtherTopic, setObservationOtherTopic] = useState("");
-  const [observationType, setObservationType] = useState<"Event" | "Routine">("Event");
-  const [pointOfContact, setPointOfContact] = useState("");
-  const [location, setLocation] = useState("Jacksonville, NC (Camp Lejeune)");
-  const [observationSentiment, setObservationSentiment] = useState("");
-  const [agreeToEthicalAgreement, setAgreeToEthicalAgreement] = useState(false);
-  const [wantExpertiseOpportunity, setWantExpertiseOpportunity] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isObservationRecording, setIsObservationRecording] = useState(false);
-  const [recognition, setRecognition] = useState<any>(null);
-  const [observationRecognition, setObservationRecognition] = useState<any>(null);
   const [showReviewScreen, setShowReviewScreen] = useState(false);
   const [showSummaryScreen, setShowSummaryScreen] = useState(false);
   const [showReportGenerator, setShowReportGenerator] = useState(false);
   const [showReportPreview, setShowReportPreview] = useState(false);
   const [showEmailPrompt, setShowEmailPrompt] = useState(false);
-  const [emailAddress, setEmailAddress] = useState("");
-  const [eventAcronym, setEventAcronym] = useState("CPX");
-  const [fromUnit, setFromUnit] = useState("G3");
-  const [impactLevel, setImpactLevel] = useState("");
-  const [studentEID, setStudentEID] = useState("");
-  const [recommendation, setRecommendation] = useState(DEFAULT_RECOMMENDATION);
+  const [isReportIssueOpen, setIsReportIssueOpen] = useState(false);
+  const [showActionableSummary, setShowActionableSummary] = useState(false);
+  const [showCheckIn, setShowCheckIn] = useState(false);
+  const [showFreeQuestionsPopup, setShowFreeQuestionsPopup] = useState(true);
   
-  // Report Generator fields
-  const [reportDate, setReportDate] = useState(new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase());
-  const [reportReference, setReportReference] = useState("");
-  const [reportFrom, setReportFrom] = useState("Rank F Name MI L Name, Billet");
-  const [reportTo, setReportTo] = useState("Operations Officer");
-  const [reportVia, setReportVia] = useState("Rank Name, Billet");
-  const [reportSubject, setReportSubject] = useState("");
-  const [reportReferenceText, setReportReferenceText] = useState("");
-  const [reportBody, setReportBody] = useState("");
-  const [reportingEmailAddress, setReportingEmailAddress] = useState("");
+  // Observation form data (consolidated)
+  const [observationData, setObservationData] = useState({
+    topic: "AI Bias or Risk",
+    text: DEFAULT_OBSERVATION,
+    otherTopic: "",
+    type: "Event" as "Event" | "Routine",
+    pointOfContact: "",
+    location: "Jacksonville, NC (Camp Lejeune)",
+    sentiment: "",
+    eventAcronym: "CPX",
+    fromUnit: "G3",
+    impactLevel: "",
+    studentEID: "",
+    agreeToEthicalAgreement: false,
+    wantExpertiseOpportunity: false
+  });
+  
+  // Report form data (consolidated)
+  const [reportData, setReportData] = useState({
+    date: new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase(),
+    reference: "",
+    from: "Rank F Name MI L Name, Billet",
+    to: "Operations Officer",
+    via: "Rank Name, Billet",
+    subject: "",
+    referenceText: "",
+    body: "",
+    emailAddress: ""
+  });
+  
+  const [recommendation, setRecommendation] = useState(DEFAULT_RECOMMENDATION);
+  const [submittedObservation, setSubmittedObservation] = useState<string>("");
+  const [selectedEmoji, setSelectedEmoji] = useState<string>("");
+  const [emailAddress, setEmailAddress] = useState("");
+  
+  // Voice recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [isObservationRecording, setIsObservationRecording] = useState(false);
   const [isRecommendationRecording, setIsRecommendationRecording] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
+  const [observationRecognition, setObservationRecognition] = useState<any>(null);
   const [recommendationRecognition, setRecommendationRecognition] = useState<any>(null);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const expandedVideoRef = useRef<HTMLVideoElement>(null);
-  const [isVideoExpanded, setIsVideoExpanded] = useState(false);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -201,10 +230,21 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
   // to ensure complete video content display without cropping or letterboxing:
   // - Container: Dynamically sized height (200px min, 233.43px max), black background, relative positioning
   // - Video Player: 100% width/height, object-contain (preserves aspect ratio, ZERO cropping)
-  // - Playback: autoPlay, loop, playsInline (mobile optimization), controls enabled
+  // - Playback: autoPlay, playsInline (mobile optimization), controls enabled, NO LOOP (auto-advance to next video)
+  // - Auto-Advance: When a video ends, automatically plays the next video in rotation (never repeats same video)
   // - Interaction: Tap/click to expand to larger overlay view
   // - NO CROP RULE: Videos always fit completely within container - aspect ratio preserved, no content cut off
   // - MAX HEIGHT RULE: All videos capped at 233.43px height for consistent default display across all topics
+
+  // Auto-hide popup after 5 seconds
+  useEffect(() => {
+    if (showFreeQuestionsPopup) {
+      const timer = setTimeout(() => {
+        setShowFreeQuestionsPopup(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showFreeQuestionsPopup]);
 
   // Reset to default video when modal opens with rotation logic
   useEffect(() => {
@@ -257,9 +297,73 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
         console.log("Video autoplay prevented:", err);
       });
     }
+    
+    // Show NC4ME messages when NC4ME2.mp4 plays from the rotation
+    if (currentVideo === "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/NC4ME2.mp4") {
+      // Check if these messages have already been shown to avoid duplicates
+      const nc4meAlreadyShown = messages.some(msg => 
+        msg.content.includes("North Carolina for military employment")
+      );
+      
+      if (!nc4meAlreadyShown) {
+        setTimeout(() => {
+          setIsTyping(true);
+          setTimeout(() => {
+            const nc4meMessage: Message = {
+              role: "assistant",
+              content: "North Carolina for military employment\nConnect directly to NC employers through our Career Connection 365 Employment Exchange. [NC4ME](https://www.nc4me.org)"
+            };
+            setMessages(prev => [...prev, nc4meMessage]);
+            setIsTyping(false);
+            
+            // Show Forbes article 5 seconds after NC4ME message
+            setTimeout(() => {
+              setIsTyping(true);
+              setTimeout(() => {
+                const forbesMessage: Message = {
+                  role: "assistant",
+                  content: "Additional Resource: [The 5 Growth Skills That Matter Most When Working With AI in 2026](https://www.forbes.com/sites/dianehamilton/2026/01/03/the-5-growth-skills-that-matter-most-when-working-with-ai-in-2026) - Forbes article on essential AI skills."
+                };
+                setMessages(prev => [...prev, forbesMessage]);
+                setIsTyping(false);
+              }, 1000);
+            }, 5000);
+          }, 1000);
+        }, 500);
+      }
+    }
   }, [currentVideo]);
 
-  if (!isOpen) return null;
+  // Handle video ended - play next video in rotation
+  const handleVideoEnded = () => {
+    // Special handling: If SSgtW.mp4 just ended, play NC4ME2.mp4 next
+    if (currentVideo === "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/SSgtW.mp4") {
+      setCurrentVideo("https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/NC4ME2.mp4");
+      // Messages will be shown by the useEffect that monitors currentVideo changes
+      return;
+    }
+    
+    // Get current rotation state
+    const rotationData = localStorage.getItem('videoRotationState');
+    let currentIndex = 0;
+    
+    if (rotationData) {
+      const parsed = JSON.parse(rotationData);
+      currentIndex = parsed.currentIndex || 0;
+    }
+    
+    // Move to next video in rotation (never repeat the same video)
+    currentIndex = (currentIndex + 1) % VIDEO_ROTATION.length;
+    
+    // Save updated state with showCount of 1 for the new video
+    localStorage.setItem('videoRotationState', JSON.stringify({
+      currentIndex,
+      showCount: 1
+    }));
+    
+    // Set the next video to display
+    setCurrentVideo(VIDEO_ROTATION[currentIndex]);
+  };
 
   // Function to log questions to localStorage
   const logQuestion = (topic: string, question: string, isPillButton: boolean) => {
@@ -343,12 +447,18 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
     "Frameworks for Innovation": "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/AgileMike.mp4",
     "AI Blind Spots & Pitfalls": "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/Big3Risk-RACI-Governance.mp4",
     "Governance & Workforce Readiness": "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/SSgtW.mp4",
+    "KPI & ROI": "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/RACI-AI.mp4",
     "Training": "https://naskxuojfdqcunotdjzi.supabase.co/storage/v1/object/public/make-3504d096-videos/Process-Citrus.mp4",
   };
 
   // Search in-app content for relevant information
   const searchContentForAnswer = (query: string): string | null => {
     const lowerQuery = query.toLowerCase();
+    
+    // Special case for Dashboard, Trust, or KPI queries
+    if (lowerQuery.includes("dashboard") || lowerQuery.includes("trust") || lowerQuery.includes("kpi")) {
+      return "A simple starting point for AI Governance KPIs can start with transparency and trust.\n\n**Governance Transparency & Accessibility Score (TAS)**\nMeasures how clearly AI governance policies, roles, and KPIs are communicated and how easily employees can access them. Transparency builds trust.\n\n**KPI Definition:**\nTracks the percentage of AI governance materials (policies, standards, KPIs, decision logs, model cards, risk assessments) that are published, up‑to‑date, and accessible through a centralized, easy‑to‑find location.\n\n**Example Target:**\nAchieve 95% publication and accessibility of all current AI governance documents in a single, searchable repository.";
+    }
     
     // Special case for ROI queries (standalone, not part of open government context)
     if (lowerQuery.includes("roi") || lowerQuery.includes("return on investment")) {
@@ -362,7 +472,7 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
     
     // Special case for Free AI Leadership Training queries
     if (lowerQuery.includes("free") && (lowerQuery.includes("ai") || lowerQuery.includes("leadership") || lowerQuery.includes("training"))) {
-      return "For free AI leadership training, check out: https://agent.myora.now\n\nThis resource provides comprehensive AI leadership development content.";
+      return "For free AI leadership training, check out: [https://agent.myora.now](https://agent.myora.now)\n\nThis resource provides comprehensive AI leadership development content.";
     }
     
     // Special case for Frameworks or Agile queries
@@ -479,7 +589,7 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
       "Governance & Workforce Readiness": "Effective AI governance balances innovation with risk management. Workforce readiness requires upskilling, change management, and clear role definitions using frameworks like RACI. Get a template and get started! [https://www.smartsheet.com/content/raci-templates-excel](https://www.smartsheet.com/content/raci-templates-excel)",
       "ROI": "Return on Investment (ROI) is a simple way to measure how much value you get back compared to what you put in. It's used in business, finance, marketing, training programs, and even personal decisions.",
       "KPI & ROI": "An AI Governance KPI Dashboard builds trust, strengthens transparency and maximizes return on investment by giving leaders a clear view of model reliability, data-drift incidents, fairness audit coverage, and overall operational performance. Key metrics include: Operational Maintenance & Consumption Cost, Model Reliability, Data Drift Incidents, Fairness Audit Coverage, Transparency Measurement, IT Spending on Applied AI, and AI Workforce Training & Readiness. I suggest this resource: [STATE OF AI IN BUSINESS 2025](https://mlq.ai/media/quarterly_decks/v0.1_State_of_AI_in_Business_2025_Report.pdf?utm_source=copilot.com)",
-      "Training": "Effective AI training programs combine technical skills with practical application. Research shows that hands-on learning with real-world scenarios increases retention by 60%.\n\nCheck out: [The 5 Skill Sets Leaders Must Develop in the AI Era](https://www.forbes.com/councils/forbescoachescouncil/2026/01/07/the-5-skill-sets-leaders-must-develop-in-the-ai-era/?utm_source=copilot.com) - Forbes article on essential AI skills.\n\nFor free AI leadership training, and a personalized agent like this one, check out: https://agent.myora.now",
+      "Training": "Effective AI training programs combine technical skills with practical application. Research shows that hands-on learning with real-world scenarios increases retention by 60%.\n\nCheck out: [The 5 Skill Sets Leaders Must Develop in the AI Era](https://www.forbes.com/councils/forbescoachescouncil/2026/01/07/the-5-skill-sets-leaders-must-develop-in-the-ai-era/?utm_source=copilot.com) - Forbes article on essential AI skills.\n\nFor free AI leadership training, and a personalized agent like this one, check out: [https://agent.myora.now](https://agent.myora.now)",
       "Next Live Q & A": "Let's make an appointment! Click [Calendly.com/caraz007](https://calendly.com/caraz007)\n\nMy personal AI avatar makes the introduction and helps me stay organized! We can talk about free AI leadership training, Agentic AI, measurable change and learn how you can get a personalized agent just like this one!",
       "Open Government Act": "The Open Government requires Machine-Readable Data — Open Government data assets made available by all agencies. [https://www.congress.gov/bill/115th-congress/house-bill/1770/text](https://www.congress.gov/bill/115th-congress/house-bill/1770/text)"
     };
@@ -636,12 +746,51 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
 
       // Special handling for KPI & ROI topic - send follow-up messages
       if (topic === "KPI & ROI") {
+        // First Harvard link - appears immediately
+        setTimeout(() => {
+          setIsTyping(true);
+          setTimeout(() => {
+            const harvardGuideMessage: Message = {
+              role: "assistant",
+              content: "[Harvard C-Suite Guide (Oct 2025)](https://www.harvardbusiness.org/wp-content/uploads/2025/10/CRE6706_ENT_LDS25_CLevel_Guide_Oct2025_V4.pdf)"
+            };
+            setMessages(prev => [...prev, harvardGuideMessage]);
+            setIsTyping(false);
+            
+            // Second Harvard link - appears 6 seconds later
+            setTimeout(() => {
+              setIsTyping(true);
+              setTimeout(() => {
+                const harvardTemplateMessage: Message = {
+                  role: "assistant",
+                  content: "[C-Suite template](https://www.harvardbusiness.org/wp-content/uploads/2025/10/CRE6997_ENT_CLevel_Assessment_Oct2025.pdf)"
+                };
+                setMessages(prev => [...prev, harvardTemplateMessage]);
+                setIsTyping(false);
+                
+                // TAS message - appears after Harvard template
+                setTimeout(() => {
+                  setIsTyping(true);
+                  setTimeout(() => {
+                    const tasMessage: Message = {
+                      role: "assistant",
+                      content: "A simple starting point for AI Governance KPIs can start with transparency and trust.\n\n**Governance Transparency & Accessibility Score (TAS)**\nMeasures how clearly AI governance policies, roles, and KPIs are communicated and how easily employees can access them. Transparency builds trust.\n\n**KPI Definition:**\nTracks the percentage of AI governance materials (policies, standards, KPIs, decision logs, model cards, risk assessments) that are published, up‑to‑date, and accessible through a centralized, easy‑to‑find location.\n\n**Example Target:**\nAchieve 95% publication and accessibility of all current AI governance documents in a single, searchable repository."
+                    };
+                    setMessages(prev => [...prev, tasMessage]);
+                    setIsTyping(false);
+                  }, 1000);
+                }, 3000); // 3 seconds after Harvard template
+              }, 1000);
+            }, 6000); // 6 seconds delay
+          }, 1000);
+        }, 2000); // 2 seconds initial delay
+        
         setTimeout(() => {
           setIsTyping(true);
           setTimeout(() => {
             const secondaryMessage: Message = {
               role: "assistant",
-              content: "For free AI leadership training, check out: https://agent.myora.now"
+              content: "For free AI leadership training, check out: [https://agent.myora.now](https://agent.myora.now)"
             };
             setMessages(prev => [...prev, secondaryMessage]);
             setIsTyping(false);
@@ -672,13 +821,43 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
               }, 1000);
             }, 5000); // 5 seconds after second message
           }, 1000);
-        }, 5000); // 5 seconds delay
+        }, 13000); // 13 seconds delay (2 + 6 + 3 + 2 to account for Harvard links and TAS message)
+      }
+
+      // Special handling for USMC Knowledge Management topic - send Harvard links
+      if (topic === "USMC Knowledge Management") {
+        // First Harvard link - appears immediately
+        setTimeout(() => {
+          setIsTyping(true);
+          setTimeout(() => {
+            const harvardGuideMessage: Message = {
+              role: "assistant",
+              content: "[Harvard C-Suite Guide (Oct 2025)](https://www.harvardbusiness.org/wp-content/uploads/2025/10/CRE6706_ENT_LDS25_CLevel_Guide_Oct2025_V4.pdf)"
+            };
+            setMessages(prev => [...prev, harvardGuideMessage]);
+            setIsTyping(false);
+            
+            // Second Harvard link - appears 6 seconds later
+            setTimeout(() => {
+              setIsTyping(true);
+              setTimeout(() => {
+                const harvardTemplateMessage: Message = {
+                  role: "assistant",
+                  content: "[C-Suite template](https://www.harvardbusiness.org/wp-content/uploads/2025/10/CRE6997_ENT_CLevel_Assessment_Oct2025.pdf)"
+                };
+                setMessages(prev => [...prev, harvardTemplateMessage]);
+                setIsTyping(false);
+              }, 1000);
+            }, 6000); // 6 seconds delay
+          }, 1000);
+        }, 2000); // 2 seconds initial delay
       }
       
       // Universal Forbes article suggestion for ALL pill topics
       // This appears after all topic-specific messages
       const delayForForbes = topic === "Governance & Workforce Readiness" ? 25000 : 
                               topic === "KPI & ROI" ? 25000 : 
+                              topic === "USMC Knowledge Management" ? 12000 : 
                               topic === "AI Blind Spots & Pitfalls" ? 15000 : 
                               topic === "Frameworks for Innovation" || topic === "Applied AI for Transformation" || topic === "Training" ? 10000 : 
                               5000;
@@ -747,7 +926,7 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
     { emoji: "😊", label: "Very Happy" },
     { emoji: "🙂", label: "Happy" },
     { emoji: "😁", label: "Excited" },
-    { emoji: "🥳", label: "Celebrating" },
+    { emoji: "🤨", label: "Curious" },
     { emoji: "😌", label: "Peaceful" },
     { emoji: "😎", label: "Confident" },
     { emoji: "😃", label: "Amazed" },
@@ -786,7 +965,7 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
     { emoji: "😞", label: "Depressed" },
     { emoji: "😞", label: "Disappointed" },
     { emoji: "😳", label: "Embarrassed" },
-    { emoji: "💪", label: "Empowered" },
+    { emoji: "��", label: "Empowered" },
     { emoji: "😃", label: "Excited" },
     { emoji: "😤", label: "Frustrated" },
     { emoji: "🙏", label: "Grateful" },
@@ -870,14 +1049,15 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
   const renderMessageContent = (content: string) => {
     // Regular expression to find markdown-style links [text](url)
     const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-    const parts: (string | JSX.Element)[] = [];
+    const parts: JSX.Element[] = [];
     let lastIndex = 0;
     let match;
 
     while ((match = linkRegex.exec(content)) !== null) {
       // Add text before the link
       if (match.index > lastIndex) {
-        parts.push(content.substring(lastIndex, match.index));
+        const textBefore = content.substring(lastIndex, match.index);
+        parts.push(<span key={`text-${lastIndex}`} className="!text-gray-700">{textBefore}</span>);
       }
 
       // Add the link
@@ -900,16 +1080,22 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
 
     // Add remaining text after the last link
     if (lastIndex < content.length) {
-      parts.push(content.substring(lastIndex));
+      const remainingText = content.substring(lastIndex);
+      parts.push(<span key={`text-${lastIndex}`} className="!text-gray-700">{remainingText}</span>);
     }
 
-    // If no links were found, return the original content
-    return parts.length === 0 ? content : parts;
+    // If no links were found, return the original content wrapped in span
+    // Otherwise return all parts wrapped in a fragment
+    return parts.length === 0 ? <span className="!text-gray-700">{content}</span> : <>{parts}</>;
   };
 
+  if (!isOpen) return null;
+
   return (
+    <>
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-[415px] h-[880px] max-h-[90vh] overflow-hidden flex flex-col relative">
+      {/* RULE: Agent modal always displays in light mode */}
+      <div className="bg-white rounded-2xl w-full max-w-[415px] h-[880px] max-h-[90vh] overflow-hidden flex flex-col relative [&_*]:!text-gray-900 [&_textarea]:!text-gray-900 [&_input]:!text-gray-900">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -923,13 +1109,13 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
         <div className="relative bg-black" style={{ height: videoContainerHeight }}>
           <video
             ref={videoRef}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-contain cursor-pointer"
             autoPlay
-            loop
             playsInline
             controls
             onClick={handleVideoClick}
             onLoadedMetadata={handleVideoLoadedMetadata}
+            onEnded={handleVideoEnded}
           >
             <source src={currentVideo} type="video/mp4" />
           </video>
@@ -1024,12 +1210,13 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                       {renderMessageContent(message.content)}
                     </div>
                     {/* Thumbs up/down feedback for assistant messages */}
+                    {/* RULE: Thumbs buttons are gray, not white */}
                     {message.role === "assistant" && message.id && (
                       <div className="flex items-center gap-1 mt-1">
                         <button
                           onClick={() => handleFeedback(message.id!, "thumbs_up")}
                           className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                            message.feedback === "thumbs_up" ? "bg-green-100 text-green-600" : "text-gray-400"
+                            message.feedback === "thumbs_up" ? "bg-green-100 text-green-600" : "text-gray-500"
                           }`}
                           aria-label="Helpful"
                         >
@@ -1038,7 +1225,7 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                         <button
                           onClick={() => handleFeedback(message.id!, "thumbs_down")}
                           className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                            message.feedback === "thumbs_down" ? "bg-red-100 text-red-600" : "text-gray-400"
+                            message.feedback === "thumbs_down" ? "bg-red-100 text-red-600" : "text-gray-500"
                           }`}
                           aria-label="Not helpful"
                         >
@@ -1060,6 +1247,15 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
             </>
           )}
         </div>
+
+        {/* Free Questions Popup - Floating overlay */}
+        {showFreeQuestionsPopup && (
+          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 animate-fade-in">
+            <div className="bg-purple-500 text-white px-4 py-2 rounded-full text-xs font-semibold shadow-lg">
+              9 free questions remaining
+            </div>
+          </div>
+        )}
 
         {/* Input Section */}
         <div className="border-t border-gray-200 p-4">
@@ -1106,9 +1302,14 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
             />
-            <button className="p-1.5 bg-black hover:bg-gray-800 rounded-lg transition-colors" onClick={handleSendMessage}>
-              <Send className="size-4 text-white" />
+            <button className="p-1.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors" onClick={handleSendMessage}>
+              <Send className="size-4 text-black" />
             </button>
+          </div>
+          
+          {/* Decorative Watermark Text */}
+          <div className="text-gray-400 text-[7px] sm:text-[8px] tracking-[0.15em] sm:tracking-[0.2em] font-bold opacity-30 text-center mt-2 whitespace-nowrap">
+            AGENTIC AI LEADERSHIP FOR MEASURABLE TRANSFORMATION
           </div>
         </div>
       </div>
@@ -1143,8 +1344,8 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                 </div>
                 <div className="relative">
                   <select
-                    value={observationTopic}
-                    onChange={(e) => setObservationTopic(e.target.value)}
+                    value={observationData.topic}
+                    onChange={(e) => setObservationData(prev => ({ ...prev, topic: e.target.value }))}
                     className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:border-yellow-600"
                   >
                     <option value="AI Bias or Risk">AI Bias or Risk</option>
@@ -1159,7 +1360,7 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
               </div>
 
               {/* Conditional "Other" Topic Input */}
-              {observationTopic === "Other" && (
+              {observationData.topic === "Other" && (
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">Please specify the topic</label>
                   <input
@@ -1179,8 +1380,8 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                 <label className="text-sm font-semibold">Observation <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <textarea
-                    value={observationText}
-                    onChange={(e) => setObservationText(e.target.value)}
+                    value={observationData.text}
+                    onChange={(e) => setObservationData(prev => ({ ...prev, text: e.target.value }))}
                     className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:border-yellow-600 min-h-[120px] resize-none"
                   />
                   <button
@@ -1220,9 +1421,9 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setObservationType("Event")}
+                    onClick={() => setObservationData(prev => ({ ...prev, type: "Event" }))}
                     className={`py-2 px-4 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
-                      observationType === "Event"
+                      observationData.type === "Event"
                         ? 'bg-black text-white'
                         : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}
@@ -1237,9 +1438,9 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setObservationType("Routine")}
+                    onClick={() => setObservationData(prev => ({ ...prev, type: "Routine" }))}
                     className={`py-2 px-4 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
-                      observationType === "Routine"
+                      observationData.type === "Routine"
                         ? 'bg-black text-white'
                         : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}
@@ -1258,8 +1459,8 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                 <label className="text-sm font-semibold">Point of Contact (Optional)</label>
                 <input
                   type="text"
-                  value={pointOfContact}
-                  onChange={(e) => setPointOfContact(e.target.value)}
+                  value={observationData.pointOfContact}
+                  onChange={(e) => setObservationData(prev => ({ ...prev, pointOfContact: e.target.value }))}
                   placeholder="Phone representative, event organizer, or witness"
                   className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:border-yellow-600 placeholder:text-gray-400"
                 />
@@ -1271,8 +1472,8 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                 <div className="relative">
                   <input
                     type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
+                    value={observationData.location}
+                    onChange={(e) => setObservationData(prev => ({ ...prev, location: e.target.value }))}
                     placeholder="Jacksonville, NC (Camp Lejeune)"
                     className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:border-yellow-600"
                   />
@@ -1288,9 +1489,9 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                     <button
                       key={index}
                       type="button"
-                      onClick={() => setObservationSentiment(option.label)}
+                      onClick={() => setObservationData(prev => ({ ...prev, sentiment: option.label }))}
                       className={`flex flex-col items-center gap-[2px] pl-[7px] pr-[7px] pt-[2px] pb-[4px] rounded-lg transition-all border ${
-                        observationSentiment === option.label
+                        observationData.sentiment === option.label
                           ? 'bg-yellow-50 border-yellow-400 ring-2 ring-yellow-400'
                           : 'bg-white border-gray-200 hover:bg-gray-50'
                       }`}
@@ -1307,19 +1508,15 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
               {/* Save Button */}
               <button 
                 onClick={() => {
-                  console.log("Observation submitted:", { 
-                    observationTopic, 
-                    observationText, 
-                    observationType,
-                    pointOfContact,
-                    location,
-                    observationSentiment
-                  });
-                  setShowReviewScreen(true);
+                  console.log("Observation submitted:", observationData);
+                  // Populate ReportIssueModal with the observation data
+                  setSubmittedObservation(observationData.text);
+                  setShowCautionForm(false);
+                  setIsReportIssueOpen(true);
                 }}
-                disabled={!observationText.trim() || !observationSentiment}
+                disabled={!observationData.text.trim() || !observationData.sentiment}
                 className={`w-full px-6 py-2.5 rounded-lg transition-colors font-semibold ${
-                  observationText.trim() && observationSentiment
+                  observationData.text.trim() && observationData.sentiment
                     ? 'bg-green-600 text-white hover:bg-green-700'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
@@ -1347,20 +1544,20 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
               
               {/* Observation Text Box */}
               <div className="bg-gray-100 rounded-lg p-3 text-sm text-gray-800 leading-relaxed">
-                {observationText}
+                {observationData.text}
               </div>
               
               {/* Pills */}
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 <span className="inline-flex items-center px-3 py-1 bg-white border border-gray-300 rounded-full text-xs font-medium text-gray-700">
-                  {observationType}
+                  {observationData.type}
                 </span>
                 <span className="inline-flex items-center px-3 py-1 bg-white border border-gray-300 rounded-full text-xs font-medium text-gray-700">
-                  {observationTopic}
+                  {observationData.topic}
                 </span>
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-white border border-gray-300 rounded-full text-xs font-medium text-gray-700">
-                  <span>{sentimentOptions.find(s => s.label === observationSentiment)?.emoji}</span>
-                  <span>{observationSentiment}</span>
+                  <span>{sentimentOptions.find(s => s.label === observationData.sentiment)?.emoji}</span>
+                  <span>{observationData.sentiment}</span>
                 </span>
               </div>
             </div>
@@ -1447,8 +1644,8 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                 </div>
                 <div className="relative">
                   <select
-                    value={eventAcronym}
-                    onChange={(e) => setEventAcronym(e.target.value)}
+                    value={observationData.eventAcronym}
+                    onChange={(e) => setObservationData(prev => ({ ...prev, eventAcronym: e.target.value }))}
                     className="w-full px-3 py-1 bg-gray-50 border border-gray-300 rounded-lg text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-600"
                   >
                     <option value="CPX">CPX</option>
@@ -1470,8 +1667,8 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                 </div>
                 <input
                   type="text"
-                  value={pointOfContact}
-                  onChange={(e) => setPointOfContact(e.target.value)}
+                  value={observationData.pointOfContact}
+                  onChange={(e) => setObservationData(prev => ({ ...prev, pointOfContact: e.target.value }))}
                   placeholder="Enter point of contact (Optional)"
                   className="w-full px-3 py-1 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-600"
                 />
@@ -1487,8 +1684,8 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                 </div>
                 <div className="relative">
                   <select
-                    value={fromUnit}
-                    onChange={(e) => setFromUnit(e.target.value)}
+                    value={observationData.fromUnit}
+                    onChange={(e) => setObservationData(prev => ({ ...prev, fromUnit: e.target.value }))}
                     className="w-full px-3 py-1 bg-gray-50 border border-gray-300 rounded-lg text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-600"
                   >
                     <option value="G3">G3</option>
@@ -1511,8 +1708,8 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                 </div>
                 <div className="relative">
                   <select
-                    value={impactLevel}
-                    onChange={(e) => setImpactLevel(e.target.value)}
+                    value={observationData.impactLevel}
+                    onChange={(e) => setObservationData(prev => ({ ...prev, impactLevel: e.target.value }))}
                     className="w-full px-3 py-1 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-500 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-600"
                   >
                     <option value="">Select impact level (Optional)</option>
@@ -1535,8 +1732,8 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                 </div>
                 <input
                   type="text"
-                  value={studentEID}
-                  onChange={(e) => setStudentEID(e.target.value)}
+                  value={observationData.studentEID}
+                  onChange={(e) => setObservationData(prev => ({ ...prev, studentEID: e.target.value }))}
                   placeholder="Enter Student EID Number, School separated by commas"
                   className="w-full px-3 py-1 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-600"
                 />
@@ -1606,7 +1803,7 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
             {/* Observation */}
             <div className="mb-4">
               <h3 className="font-bold mb-1">Observation:</h3>
-              <p className="text-sm text-gray-700 leading-relaxed">{observationText}</p>
+              <p className="text-sm text-gray-700 leading-relaxed">{observationData.text}</p>
             </div>
             
             {/* Recommendation */}
@@ -1619,24 +1816,24 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
             <div className="space-y-1.5 mb-6 text-sm">
               <div className="flex items-start gap-2">
                 <span className="text-gray-400 mt-0.5">•</span>
-                <span className="text-gray-700"><span className="font-semibold">Topic:</span> {observationTopic}</span>
+                <span className="text-gray-700"><span className="font-semibold">Topic:</span> {observationData.topic}</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-gray-400 mt-0.5">•</span>
-                <span className="text-gray-700"><span className="font-semibold">Event Type:</span> {observationType}</span>
+                <span className="text-gray-700"><span className="font-semibold">Event Type:</span> {observationData.type}</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-gray-400 mt-0.5">•</span>
-                <span className="text-gray-700"><span className="font-semibold">Sentiment:</span> {observationSentiment}</span>
+                <span className="text-gray-700"><span className="font-semibold">Sentiment:</span> {observationData.sentiment}</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-gray-400 mt-0.5">•</span>
-                <span className="text-gray-700"><span className="font-semibold">Location:</span> {location}</span>
+                <span className="text-gray-700"><span className="font-semibold">Location:</span> {observationData.location}</span>
               </div>
-              {impactLevel && (
+              {observationData.impactLevel && (
                 <div className="flex items-start gap-2">
                   <span className="text-gray-400 mt-0.5">•</span>
-                  <span className="text-gray-700"><span className="font-semibold">Impact:</span> {impactLevel}</span>
+                  <span className="text-gray-700"><span className="font-semibold">Impact:</span> {observationData.impactLevel}</span>
                 </div>
               )}
               <div className="flex items-start gap-2">
@@ -1657,9 +1854,12 @@ export function AIAgentModal({ isOpen, onClose }: AIAgentModalProps) {
                   // Populate report fields with observation data
                   const today = new Date();
                   const formattedDate = today.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).replace(',', '').toUpperCase();
-                  setReportDate(formattedDate);
-                  setReportSubject(`AFTER ACTION REPORT FOR EVENT CONDUCTED FROM ${today.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}`);
-                  setReportTo(pointOfContact || "Operations Officer");
+                  setReportData(prev => ({
+                    ...prev,
+                    date: formattedDate,
+                    subject: `AFTER ACTION REPORT FOR EVENT CONDUCTED FROM ${today.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}`,
+                    to: observationData.pointOfContact || "Operations Officer"
+                  }));
                   
                   // Build report body with observation data
                   const bodyText = `1. Background.
@@ -1670,9 +1870,9 @@ This report summarizes observation(s) recorded on ${today.toLocaleDateString('en
 
 2. Areas for Improvement.
 
-   a. Topic. ${observationTopic}
+   a. Topic. ${observationData.topic}
 
-      (1) Discussion. ${observationText}
+      (1) Discussion. ${observationData.text}
 
       (2) Recommendation. ${recommendation}
 
@@ -1696,7 +1896,7 @@ Signature
 
 Enclosure (12)`;
                   
-                  setReportBody(bodyText);
+                  setReportData(prev => ({ ...prev, body: bodyText }));
                   
                   setShowSummaryScreen(false);
                   setShowReportGenerator(true);
@@ -1851,8 +2051,8 @@ Enclosure (12)`;
                 <label className="text-sm font-medium text-gray-700">Date</label>
                 <input
                   type="text"
-                  value={reportDate}
-                  onChange={(e) => setReportDate(e.target.value)}
+                  value={reportData.date}
+                  onChange={(e) => setReportData(prev => ({ ...prev, date: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1874,8 +2074,8 @@ Enclosure (12)`;
                 <label className="text-sm font-medium text-gray-700">From</label>
                 <input
                   type="text"
-                  value={reportFrom}
-                  onChange={(e) => setReportFrom(e.target.value)}
+                  value={reportData.from}
+                  onChange={(e) => setReportData(prev => ({ ...prev, from: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1885,8 +2085,8 @@ Enclosure (12)`;
                 <label className="text-sm font-medium text-gray-700">To</label>
                 <input
                   type="text"
-                  value={reportTo}
-                  onChange={(e) => setReportTo(e.target.value)}
+                  value={reportData.to}
+                  onChange={(e) => setReportData(prev => ({ ...prev, to: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1896,8 +2096,8 @@ Enclosure (12)`;
                 <label className="text-sm font-medium text-gray-700">Via (Optional)</label>
                 <input
                   type="text"
-                  value={reportVia}
-                  onChange={(e) => setReportVia(e.target.value)}
+                  value={reportData.via}
+                  onChange={(e) => setReportData(prev => ({ ...prev, via: e.target.value }))}
                   placeholder="Rank Name, Billet"
                   className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -1908,8 +2108,8 @@ Enclosure (12)`;
                 <label className="text-sm font-medium text-gray-700">Subject</label>
                 <input
                   type="text"
-                  value={reportSubject}
-                  onChange={(e) => setReportSubject(e.target.value)}
+                  value={reportData.subject}
+                  onChange={(e) => setReportData(prev => ({ ...prev, subject: e.target.value }))}
                   placeholder="AFTER ACTION REPORT FOR EVENT CONDUCTED FROM 29 JANUARY 2026"
                   className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -1952,8 +2152,8 @@ Enclosure (12)`;
               {/* Body Text */}
               <div className="space-y-2">
                 <textarea
-                  value={reportBody}
-                  onChange={(e) => setReportBody(e.target.value)}
+                  value={reportData.body}
+                  onChange={(e) => setReportData(prev => ({ ...prev, body: e.target.value }))}
                   placeholder="1. Background.&#10;&#10;This report summarizes 3 observations recorded between 29JAN2026 – 31JAN2026. The observations are categorized into areas for improvement and practices to sustain. Specific objectives during this event include:&#10;• [objective]&#10;• [objective]&#10;• [objective]&#10;&#10;2. Areas for Improvement.&#10;&#10;   a. Topic. Performance Management&#10;&#10;      (1) Discussion. Team members have reported that performance reviews are inconsistent across departments, with some receiving detailed, constructive feedback while others get generic comments..."
                   className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono leading-relaxed min-h-[400px]"
                   rows={20}
@@ -2157,5 +2357,72 @@ ${reportBody}`;
         </div>
       )}
     </div>
+
+    {/* Expanded Video Modal Overlay */}
+    {isVideoExpanded && (
+      <div 
+        className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4"
+        onClick={handleCloseExpandedVideo}
+      >
+        <div className="relative w-full max-w-6xl aspect-video">
+          {/* Close Button */}
+          <button
+            onClick={handleCloseExpandedVideo}
+            className="absolute -top-12 right-0 bg-white/10 hover:bg-white/20 rounded-full p-3 transition-colors z-10"
+            aria-label="Close expanded video"
+          >
+            <X className="size-6 text-white" />
+          </button>
+          
+          {/* Expanded Video Player */}
+          <video
+            ref={expandedVideoRef}
+            className="w-full h-full object-contain rounded-lg"
+            autoPlay
+            playsInline
+            controls
+            onClick={(e) => e.stopPropagation()}
+            onEnded={handleVideoEnded}
+          >
+            <source src={currentVideo} type="video/mp4" />
+          </video>
+          
+          {/* Tap/Click instruction for mobile */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white text-sm px-4 py-2 rounded-full pointer-events-none">
+            Tap outside to close
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Report Issue Modal */}
+    <ReportIssueModal 
+      isOpen={isReportIssueOpen} 
+      onClose={() => {
+        setIsReportIssueOpen(false);
+        setSubmittedObservation("");
+      }}
+      subscriberEmail={localStorage.getItem('subscriberEmail') || ''}
+      initialObservation={submittedObservation}
+      onSaveReport={(data) => {
+        console.log('Report saved:', data);
+        // Open ActionableSummary with the report data
+        setShowActionableSummary(true);
+      }}
+    />
+
+    {/* Actionable Summary */}
+    <ActionableSummary
+      isOpen={showActionableSummary}
+      onClose={() => setShowActionableSummary(false)}
+      observation={observationData.text}
+      recommendation={DEFAULT_RECOMMENDATION}
+      topic={observationData.topic}
+      eventType={observationData.type}
+      sentiment={observationData.sentiment}
+      location={observationData.location}
+      date={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+    />
+    </>
   );
 }
